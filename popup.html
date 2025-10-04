@@ -1,25 +1,170 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Veritas Result</title>
-    <style>
-        body { width: 300px; font-family: sans-serif; padding: 10px; }
-        h4 { margin-bottom: 5px; }
-        .result-box { padding: 10px; border-radius: 5px; margin-top: 10px; }
-        .Merah { background-color: #fdd; border: 1px solid #c00; color: #c00; }
-        .Kuning { background-color: #fffac9; border: 1px solid #e5a700; color: #e5a700; }
-        .Hijau { background-color: #d8f5d8; border: 1px solid #1e8449; color: #1e8449; }
-        .Error { background-color: #e0e0e0; border: 1px solid #333; color: #333; }
-        #claimText { font-style: italic; margin-bottom: 10px; display: block; }
-    </style>
+  <title>Veritas AI</title>
+  <style>
+    :root {
+      --primary: #4285F4;
+      --secondary: #34A853;
+      --warning: #FBBC05;
+      --danger: #EA4335;
+      --neutral: #f5f5f5;
+      --text: #202124;
+      --radius: 10px;
+    }
+
+    body {
+      width: 320px;
+      font-family: "Inter", "Roboto", sans-serif;
+      margin: 0;
+      padding: 0;
+      color: var(--text);
+      background: #fff;
+    }
+
+    /* Splash */
+    #splashScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 320px;
+      padding: 20px;
+      text-align: center;
+      animation: fadeIn 0.8s ease-in-out;
+    }
+
+    #splashScreen h2 {
+      margin: 10px 0 5px;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    #splashScreen p {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+    }
+
+    /* Main content */
+    #mainContent {
+      display: none;
+      padding: 16px;
+      animation: fadeIn 0.4s ease-in-out;
+    }
+
+    h4 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: var(--primary);
+    }
+
+    #claimText {
+      display: block;
+      font-style: italic;
+      margin-bottom: 8px;
+      color: #444;
+    }
+
+    .result-box {
+      border-radius: var(--radius);
+      padding: 12px;
+      font-weight: 500;
+      font-size: 14px;
+      background-color: var(--neutral);
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    .Merah { border-left-color: var(--danger); color: var(--danger); background: #fde8e8; }
+    .Kuning { border-left-color: var(--warning); color: #b57f00; background: #fff8d6; }
+    .Hijau { border-left-color: var(--secondary); color: var(--secondary); background: #e7f8ec; }
+    .Error { border-left-color: #777; color: #555; background: #f1f1f1; }
+
+    /* Upload */
+    #uploadSection {
+      border-top: 1px solid #eee;
+      margin-top: 18px;
+      padding-top: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 70px;
+      resize: none;
+      padding: 8px;
+      font-family: inherit;
+      border: 1px solid #ddd;
+      border-radius: var(--radius);
+      box-sizing: border-box;
+      margin-bottom: 8px;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background: var(--primary);
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      border-radius: var(--radius);
+      width: 100%;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: #3367d6;
+    }
+
+    #uploadStatus {
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
+  <div id="splashScreen">
+    <img src="icons/veritas48.png" alt="Veritas Logo" class="logo">
+    <h2>Veritas AI</h2>
+    <p>Seeking Facts and Clarity</p>
+  </div>
+
+  <div id="mainContent">
     <h4>Veritas Fact Check Result:</h4>
     <span id="claimText"></span>
     <div id="resultBox" class="result-box">
-        Memuat hasil...
+      Memuat hasil...
     </div>
 
-    <script src="popup.js"></script>
+    <div id="uploadSection">
+      <h4>Cek Fakta dari Gambar Lokal:</h4>
+      <textarea id="textClaimInput" placeholder="Masukkan klaim terkait gambar..."></textarea>
+      <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
+      <button id="submitUploadButton">Analisis Gambar</button>
+      <div id="uploadStatus"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>

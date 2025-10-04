@@ -1,15 +1,56 @@
-// background.js (Hybrid Solution: Teks Fact Check & Multimodal Penuh)
+// background.js (Final Version: Persistent Window, Google Search Grounding, & Multimodal)
 
 // ====================================================================
-// FUNGSI 1: MENGIRIM HASIL KE POPUP (Menggunakan Chrome Storage)
+// SETUP JENDELA PERSISTENT
+// ====================================================================
+let veritasWindowId = null;
+
+// FUNGSI INI WAJIB DIPANGGIL OLEH KLIK KANAN DAN KLIK ICON
+async function createOrToggleVeritasWindow() {
+    if (veritasWindowId) {
+        // Jika window sudah ada (klik icon kedua), tutup.
+        chrome.windows.remove(veritasWindowId);
+        veritasWindowId = null;
+    } else {
+        // Jika window belum ada, buat baru.
+        const newWindow = await chrome.windows.create({
+            url: 'popup.html',
+            type: 'popup',
+            width: 320, 
+            height: 600, 
+            top: 50, 
+            left: screen.width - 320 
+        });
+        veritasWindowId = newWindow.id;
+        console.log(`[Veritas Window] Jendela baru dibuat dengan ID: ${veritasWindowId}`);
+    }
+}
+
+// Handle saat window ditutup secara manual oleh user (tombol X)
+chrome.windows.onRemoved.addListener(windowId => {
+    if (windowId === veritasWindowId) {
+        veritasWindowId = null;
+        console.log("[Veritas Window] Jendela ditutup secara manual.");
+    }
+});
+
+// Listener untuk klik icon Veritas di toolbar (menggantikan default popup)
+chrome.action.onClicked.addListener(createOrToggleVeritasWindow);
+
+
+// ====================================================================
+// FUNGSI 1: MENGIRIM HASIL KE POPUP (DIPERBARUI)
 // ====================================================================
 
 function sendResultToPopup(result) {
-    // Simpan hasil ke storage yang bisa diakses oleh popup
-    chrome.storage.local.set({ 'lastFactCheckResult': result }, () => {
-         // Membuka popup setelah data tersimpan.
-         chrome.action.openPopup(); 
-    });
+    // 1. Simpan hasil ke storage
+    chrome.storage.local.set({ 'lastFactCheckResult': result });
+    
+    // 2. Jika window belum ada, paksa muncul
+    if (!veritasWindowId) {
+        createOrToggleVeritasWindow();
+    }
+    // Jika window sudah ada, ia akan otomatis me-refresh dan membaca storage
 }
 
 // ====================================================================
@@ -17,24 +58,24 @@ function sendResultToPopup(result) {
 // ====================================================================
 
 chrome.runtime.onInstalled.addListener(() => {
-    // Menu 1: Cek Fakta Teks (Selection) - P1
+    // Menu 1: Cek Fakta Teks (Selection)
     chrome.contextMenus.create({
         id: "veritasFactCheckText",
         title: "Veritas: Cek Fakta Klaim Teks",
         contexts: ["selection"] 
     });
 
-    // Menu 2: Cek Fakta Multimodal (Gambar) - P2
+    // Menu 2: Cek Fakta Multimodal (Gambar)
     chrome.contextMenus.create({
         id: "veritasFactCheckMultimodal",
-        title: "Veritas: Cek Fakta Klaim + Gambar", // Judul final
+        title: "Veritas: Cek Fakta Klaim + Gambar",
         contexts: ["image"] 
     });
     console.log("Veritas Context Menu Teks & Multimodal dibuat.");
 });
 
 // ====================================================================
-// FUNGSI 3: LISTENER UTAMA CONTEXT MENU
+// FUNGSI 3: LISTENER UTAMA CONTEXT MENU (Klik Kanan)
 // ====================================================================
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -47,7 +88,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         console.log(`[Veritas] Menerima Teks: "${selectedText}"`);
         
         if (selectedText && selectedText.trim().length > 0) {
-            result = await runFactCheckHybrid(selectedText);
+            result = await runFactCheckHybrid(selectedText); 
             console.log("[Veritas] Hasil AI (Teks):", result);
         } else {
             console.warn("[Veritas] Tidak ada teks yang diseleksi.");
@@ -55,27 +96,53 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         }
         
     } else if (info.menuItemId === "veritasFactCheckMultimodal") {
-        // --- LOGIC MULTIMODAL FACT CHECK (P2 - Penuh) ---
+        // --- LOGIC MULTIMODAL URL (P2) ---
         
         const imageUrl = info.srcUrl; 
         const selectedText = info.selectionText || "TIDAK ADA TEKS SOROTAN.";
         
         console.log(`[Veritas Multimodal] Menerima URL Gambar: ${imageUrl}`);
         
-        // Memanggil fungsi Multimodal Fact Check yang sebenarnya
-        result = await runFactCheckMultimodal(imageUrl, selectedText);
+        result = await runFactCheckMultimodalUrl(imageUrl, selectedText);
         
         console.log("[Veritas Multimodal] Hasil Final:", result);
     }
 
-    // Fix Error Popup: Menyimpan hasil di Storage dan membuka popup
+    // Menyimpan hasil di Storage dan membuka Persistent Window
     if (result) {
         sendResultToPopup(result); 
     }
 });
 
 // ====================================================================
-// FUNGSI 4: RUN FACT CHECK HYBRID (TEKS ONLY)
+// FUNGSI 4: LISTENER UNTUK UPLOAD DARI POPUP
+// ====================================================================
+
+chrome.runtime.onMessage.addListener(
+    (request, sender, sendResponse) => {
+        if (request.action === 'multimodalUpload') {
+            const { base64, mimeType, claim } = request;
+            
+            console.log("[Veritas Upload] Menerima Base64 data dari popup.");
+
+            // Memanggil fungsi Multimodal yang diperbarui (Direct)
+            runFactCheckMultimodalDirect(base64, mimeType, claim).then(result => {
+                sendResultToPopup(result);
+                sendResponse({ success: true, result: result }); 
+            }).catch(error => {
+                const errorResult = { flag: "Error", message: `Gagal Fact Check Upload: ${error.message}`, claim: claim };
+                sendResultToPopup(errorResult);
+                sendResponse({ success: false, error: errorResult });
+            });
+
+            // Wajib kembalikan true untuk menggunakan sendResponse asinkron
+            return true; 
+        }
+    }
+);
+
+// ====================================================================
+// FUNGSI 5: RUN FACT CHECK HYBRID (TEKS ONLY) - DENGAN GOOGLE SEARCH GROUNDING
 // ====================================================================
 
 async function runFactCheckHybrid(text) {
@@ -91,18 +158,25 @@ async function runFactCheckHybrid(text) {
             };
         }
 
-        const prompt = `Anda adalah Veritas AI, spesialis cek fakta. Analisis klaim ini: "${text}". Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'. Diikuti dengan alasan singkat dan jelas.`;
+        // PROMPT BARU: Meminta AI menggunakan Search Tool
+        const prompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${text}", dengan MENCARI INFORMASI REAL-TIME di Google Search. WAJIB sertakan fakta terbaru dari sumber yang Anda temukan untuk mendukung penilaian Anda. Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'. Diikuti dengan alasan singkat dan jelas.`;
         
-        console.log("[Veritas Hybrid] Mengirim prompt ke Gemini Cloud...");
+        console.log("[Veritas Hybrid] Mengirim prompt ke Gemini Cloud (dengan Google Search)...");
+
+        // PAYLOAD BARU: Mengaktifkan Google Search Tool
+        const payload = {
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            config: {
+                tools: [{ googleSearch: {} }] // Kunci Grounding!
+            }
+        };
 
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiApiKey, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                contents: [{ role: "user", parts: [{ text: prompt }] }]
-            })
+            body: JSON.stringify(payload) // Menggunakan payload baru dengan tools
         });
 
         const data = await response.json();
@@ -150,14 +224,13 @@ async function runFactCheckHybrid(text) {
 }
 
 // ====================================================================
-// FUNGSI 5: URL KE BASE64 UTILITY
+// FUNGSI 6: URL KE BASE64 UTILITY (Untuk Multimodal URL)
 // ====================================================================
 
 async function urlToBase64(url) {
     console.log("[Veritas Multimodal] Fetching image dari URL...");
     
-    // Menghindari CORS error: Jika gambar dari URL lain, fetch bisa gagal. 
-    // Untuk hackathon, kita berasumsi CORS sudah dihandle/dibypass.
+    // Ini mungkin gagal karena CORS. Untuk hackathon, kita teruskan.
     const response = await fetch(url);
     const blob = await response.blob();
 
@@ -166,7 +239,6 @@ async function urlToBase64(url) {
         reader.onloadend = () => {
             const base64String = reader.result;
             if (base64String) {
-                // Mengambil string Base64 murni (setelah koma data:image/...)
                 resolve(base64String.split(',')[1]); 
             } else {
                 reject(new Error("Gagal konversi ke Base64."));
@@ -178,10 +250,10 @@ async function urlToBase64(url) {
 }
 
 // ====================================================================
-// FUNGSI 6: RUN FACT CHECK MULTIMODAL
+// FUNGSI 7: RUN FACT CHECK MULTIMODAL (via URL Klik Kanan)
 // ====================================================================
 
-async function runFactCheckMultimodal(imageUrl, text) {
+async function runFactCheckMultimodalUrl(imageUrl, text) {
     try {
         const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
         const geminiApiKey = resultStorage.geminiApiKey;
@@ -192,15 +264,41 @@ async function runFactCheckMultimodal(imageUrl, text) {
         
         // 1. Konversi Gambar ke Base64
         const base64Image = await urlToBase64(imageUrl);
-        // Menentukan mimeType dari Base64 string
-        const mimeType = 'image/jpeg'; // Asumsi untuk simplicity. Bisa disempurnakan dengan logic header.
+        const mimeType = 'image/jpeg'; // Asumsi untuk simplicity.
 
-        // 2. Prompt Engineering Multimodal
-        const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan klaim ini: "${text}", dengan gambar yang diberikan. Jika gambar membuktikan klaim teks, balas 'FAKTA'. Jika gambar membantah klaim teks, balas 'MISINFORMASI'. Jika gambar tidak relevan, balas 'HATI-HATI'. Ikuti dengan alasan singkat.`;
+        // 2. Memanggil fungsi Direct
+        return runFactCheckMultimodalDirect(base64Image, mimeType, text);
 
-        console.log("[Veritas Multimodal] Mengirim Base64 Image dan Prompt ke Gemini Cloud...");
+    } catch (error) {
+        console.error("[Veritas Multimodal] Kesalahan Fatal Fetch/Base64:", error);
+        return {
+            flag: "Error",
+            message: `Kesalahan Jaringan/Fatal (Gagal Fetch Gambar): ${error.message}`,
+            debug: error.message
+        };
+    }
+}
 
-        // 3. Susun Payload Multimodal
+
+// ====================================================================
+// FUNGSI 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 dari Upload/Fungsi Lain) - DENGAN GOOGLE SEARCH GROUNDING
+// ====================================================================
+
+async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
+    try {
+        const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+        const geminiApiKey = resultStorage.geminiApiKey;
+
+        if (!geminiApiKey) {
+            return { flag: "Error", message: "API Key Gemini belum diatur.", claim: "Multimodal Check Failed" };
+        }
+        
+        // 1. Prompt Engineering Multimodal (Diperbarui untuk Grounding)
+        const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan klaim ini: "${text}", dengan gambar yang diberikan. Cari konteks eksternal di Google (seperti tahun data atau sumber asli) untuk memverifikasi klaim. Jika klaim teks DAN konteks eksternal valid, balas 'FAKTA'. Jika tidak, balas 'MISINFORMASI'. WAJIB sertakan tahun data yang valid jika ditemukan.`;
+
+        console.log("[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
+
+        // 2. Susun Payload Multimodal (Ditambah config tools)
         const payload = {
             contents: [
                 {
@@ -213,10 +311,12 @@ async function runFactCheckMultimodal(imageUrl, text) {
                         }}
                     ]
                 }
-            ]
+            ],
+            config: {
+                tools: [{ googleSearch: {} }] // Kunci Grounding!
+            }
         };
 
-        // 4. Panggil Gemini Cloud API (Fetch)
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiApiKey, {
             method: "POST",
             headers: {
@@ -227,7 +327,7 @@ async function runFactCheckMultimodal(imageUrl, text) {
 
         const data = await response.json();
 
-        // 5. Proses Respon dari Gemini
+        // 3. Proses Respon dari Gemini
         if (data.candidates && data.candidates[0].content) {
             const aiResponse = data.candidates[0].content.parts[0].text.trim();
             const upperResponse = aiResponse.toUpperCase();
@@ -248,10 +348,10 @@ async function runFactCheckMultimodal(imageUrl, text) {
         }
 
     } catch (error) {
-        console.error("[Veritas Multimodal] Kesalahan Fatal Fetch/Base64:", error);
+        console.error("[Veritas Upload] Kesalahan Fatal API:", error);
         return {
             flag: "Error",
-            message: `Kesalahan Jaringan/Fatal (Gagal Fetch Gambar): ${error.message}`,
+            message: `Kesalahan Jaringan/Fatal: ${error.message}`,
             debug: error.message
         };
     }
