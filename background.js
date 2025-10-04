@@ -1,56 +1,12 @@
-// background.js (Final Version: Persistent Window, Google Search Grounding, & Multimodal)
+// background.js (Stabil & Penuh Fitur, TANPA Persistent Window Logic)
 
-// ====================================================================
-// SETUP JENDELA PERSISTENT
-// ====================================================================
-let veritasWindowId = null;
-
-// FUNGSI INI WAJIB DIPANGGIL OLEH KLIK KANAN DAN KLIK ICON
-async function createOrToggleVeritasWindow() {
-    if (veritasWindowId) {
-        // Jika window sudah ada (klik icon kedua), tutup.
-        chrome.windows.remove(veritasWindowId);
-        veritasWindowId = null;
-    } else {
-        // Jika window belum ada, buat baru.
-        const newWindow = await chrome.windows.create({
-            url: 'popup.html',
-            type: 'popup',
-            width: 320, 
-            height: 600, 
-            top: 50, 
-            left: screen.width - 320 
-        });
-        veritasWindowId = newWindow.id;
-        console.log(`[Veritas Window] Jendela baru dibuat dengan ID: ${veritasWindowId}`);
-    }
-}
-
-// Handle saat window ditutup secara manual oleh user (tombol X)
-chrome.windows.onRemoved.addListener(windowId => {
-    if (windowId === veritasWindowId) {
-        veritasWindowId = null;
-        console.log("[Veritas Window] Jendela ditutup secara manual.");
-    }
-});
-
-// Listener untuk klik icon Veritas di toolbar (menggantikan default popup)
-chrome.action.onClicked.addListener(createOrToggleVeritasWindow);
-
-
-// ====================================================================
 // FUNGSI 1: MENGIRIM HASIL KE POPUP (DIPERBARUI)
-// ====================================================================
-
+// Kita harus kembali ke chrome.action.openPopup() karena kita mengembalikan default_popup
 function sendResultToPopup(result) {
-    // 1. Simpan hasil ke storage
-    chrome.storage.local.set({ 'lastFactCheckResult': result });
-    
-    // 2. Jika window belum ada, paksa muncul
-    if (!veritasWindowId) {
-        createOrToggleVeritasWindow();
-    }
-    // Jika window sudah ada, ia akan otomatis me-refresh dan membaca storage
+    chrome.storage.local.set({ 'lastFactCheckResult': result }, () => {
+        // Karena kita menggunakan default_popup lagi, kita panggil openPopup
+        chrome.action.openPopup(); 
+    });
 }
 
 // ====================================================================
@@ -108,7 +64,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         console.log("[Veritas Multimodal] Hasil Final:", result);
     }
 
-    // Menyimpan hasil di Storage dan membuka Persistent Window
+    // Menyimpan hasil di Storage dan MEMBUKA POPUP KEMBALI
     if (result) {
         sendResultToPopup(result); 
     }

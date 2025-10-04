@@ -3,18 +3,22 @@
 document.addEventListener('DOMContentLoaded', initializePopup);
 
 function initializePopup() {
-    // Show splash screen for at least 500ms
+    // KOREKSI UTAMA: Kita panggil hideSplashScreen setelah 5000ms (5 detik durasi video)
     setTimeout(() => {
         hideSplashScreen();
         getFactCheckResult();
         setupUploadListener();
-    }, 500); // Ensures the user sees the logo for a brief moment
+    }, 5000); 
 }
 
 function hideSplashScreen() {
     // Fungsi untuk menyembunyikan splash dan menampilkan main content
     const splash = document.getElementById('splashScreen');
     const main = document.getElementById('mainContent');
+    
+    // Pastikan video berhenti saat disembunyikan agar hemat resource
+    const video = document.getElementById('splashVideo');
+    if (video) video.pause(); 
     
     if (splash) splash.style.display = 'none';
     if (main) main.style.display = 'block';

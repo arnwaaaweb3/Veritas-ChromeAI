@@ -31,26 +31,36 @@
       height: 320px;
       padding: 20px;
       text-align: center;
-      animation: fadeIn 0.8s ease-in-out;
+      position: relative; /* Penting untuk positioning video */
+      overflow: hidden;
     }
 
-    #splashScreen h2 {
-      margin: 10px 0 5px;
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--primary);
+    /* H2 dan P Dihapus dari sini karena ada di dalam video */
+    #splashScreen h2, #splashScreen p {
+      /* Kita sembunyikan atau gunakan untuk menempatkan logo di atas video */
+      z-index: 10;
+      position: absolute;
+      /* Biarkan logo SVG yang mengambil alih fokus */
     }
 
-    #splashScreen p {
-      font-size: 14px;
-      color: #666;
+    /* Video element styling */
+    #splashVideo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover; /* Memastikan video menutupi seluruh container */
+      z-index: 1; /* Di belakang logo */
     }
-
+    
+    /* Logo SVG di atas video */
     .logo {
       width: 72px;
       height: 72px;
+      z-index: 10; /* Di atas video */
+      box-shadow: 0 5px 25px rgba(0,0,0,0.3); 
       border-radius: 16px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
       margin-bottom: 15px;
     }
 
@@ -58,7 +68,6 @@
     #mainContent {
       display: none;
       padding: 16px;
-      animation: fadeIn 0.4s ease-in-out;
     }
 
     h4 {
@@ -136,17 +145,16 @@
       text-align: center;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(5px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
   </style>
 </head>
 <body>
   <div id="splashScreen">
-    <img src="icons/veritas48.png" alt="Veritas Logo" class="logo">
-    <h2>Veritas AI</h2>
-    <p>Seeking Facts and Clarity</p>
+    <video id="splashVideo" autoplay muted playsinline>
+      <source src="icons/Veritas.mp4" type="video/mp4">
+      Browser kamu tidak mendukung video HTML5.
+    </video>
+
+    <img src="icons/Veritas-LOGO2.svg" alt="Veritas Logo" class="logo" id="logoImg"> 
   </div>
 
   <div id="mainContent">
