@@ -22,7 +22,7 @@
       background: #fff;
     }
 
-    /* Splash */
+    /* === SPLASH === */
     #splashScreen {
       display: flex;
       flex-direction: column;
@@ -31,43 +31,57 @@
       height: 320px;
       padding: 20px;
       text-align: center;
-      position: relative; /* Penting untuk positioning video */
+      position: relative;
       overflow: hidden;
+      opacity: 1;
+      transition: opacity 0.8s ease; /* smooth fade-out */
     }
 
-    /* H2 dan P Dihapus dari sini karena ada di dalam video */
-    #splashScreen h2, #splashScreen p {
-      /* Kita sembunyikan atau gunakan untuk menempatkan logo di atas video */
-      z-index: 10;
-      position: absolute;
-      /* Biarkan logo SVG yang mengambil alih fokus */
+    #splashScreen.fade-out {
+      opacity: 0;
+      pointer-events: none;
     }
 
-    /* Video element styling */
     #splashVideo {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover; /* Memastikan video menutupi seluruh container */
-      z-index: 1; /* Di belakang logo */
+      object-fit: cover;
+      z-index: 1;
     }
-    
-    /* Logo SVG di atas video */
+
     .logo {
       width: 72px;
       height: 72px;
-      z-index: 10; /* Di atas video */
+      z-index: 10;
       box-shadow: 0 5px 25px rgba(0,0,0,0.3); 
       border-radius: 16px;
       margin-bottom: 15px;
+      animation: logoFade 5s ease-in-out forwards;
     }
 
-    /* Main content */
+    @keyframes logoFade {
+      0% { opacity: 0; transform: scale(0.95); }
+      25% { opacity: 1; transform: scale(1); }
+      75% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.05); }
+    }
+
+    /* === MAIN CONTENT === */
     #mainContent {
       display: none;
       padding: 16px;
+      opacity: 0;
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      transform: translateY(10px);
+    }
+
+    #mainContent.visible {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
     }
 
     h4 {
@@ -153,16 +167,13 @@
       <source src="icons/Veritas.mp4" type="video/mp4">
       Browser kamu tidak mendukung video HTML5.
     </video>
-
     <img src="icons/Veritas-LOGO2.svg" alt="Veritas Logo" class="logo" id="logoImg"> 
   </div>
 
   <div id="mainContent">
     <h4>Veritas Fact Check Result:</h4>
     <span id="claimText"></span>
-    <div id="resultBox" class="result-box">
-      Memuat hasil...
-    </div>
+    <div id="resultBox" class="result-box">Memuat hasil...</div>
 
     <div id="uploadSection">
       <h4>Cek Fakta dari Gambar Lokal:</h4>
