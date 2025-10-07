@@ -9,7 +9,8 @@
     "activeTab",           
     "scripting",
     "declarativeNetRequest",
-    "tabs"      
+    "tabs",
+    "notifications"    
   ],
   "host_permissions": [
     "<all_urls>"         
