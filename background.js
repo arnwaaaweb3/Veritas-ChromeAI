@@ -15,6 +15,7 @@ function sendResultToPopup(result, isContextual = false) {
 
 // FUNGSI BARU: Mengirim Notifikasi Chrome
 function sendFactCheckNotification(claimText, isSuccess) {
+    // ... (Fungsi ini tetap sama)
     chrome.notifications.create({
         type: 'basic',
         iconUrl: 'icons/veritas48.png', // Gunakan icon 48x48
@@ -65,42 +66,59 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             return;
         }
 
-        // 1. KRITIS: Set status Loading dan buka popup INSTAN
-        chrome.storage.local.set({
-            'lastFactCheckResult': {
-                flag: 'loading',
-                claim: selectedText
-            },
-            'isContextualCheck': true // Flag untuk popup.js agar skip splash screen
-        }, () => {
-             // Buka popup INSTAN
-             chrome.action.openPopup();
+        const isTextMode = info.menuItemId === "veritasFactCheckText";
+        const currentTabId = tab.id;
+
+        // 1. KRITIS: Set status Loading DAN kirim ke Floating Panel (context_result.js)
+        const loadingResult = {
+            flag: 'loading',
+            claim: selectedText,
+            message: "Veritas sedang memverifikasi klaim ini..."
+        };
+
+        // Inject content script (context_result.js) dan kirim status loading
+        await chrome.scripting.executeScript({
+            target: { tabId: currentTabId },
+            files: ['context_result.js'] // Inject content script kita
         });
+        
+        // Kirim update loading ke panel yang baru di-inject
+        chrome.tabs.sendMessage(currentTabId, { 
+            action: 'finalResultUpdate', // Aksi di context_result.js
+            resultData: loadingResult 
+        });
+
+        // Simpan juga loading state ke storage (untuk popup jika dibuka)
+        chrome.storage.local.set({
+            'lastFactCheckResult': loadingResult,
+            'isContextualCheck': true 
+        });
+
 
         let result = null;
         
-        if (info.menuItemId === "veritasFactCheckText") {
+        if (isTextMode) {
             // Jalankan API Call (Async)
             result = await runFactCheckHybrid(selectedText); 
-        } else if (info.menuItemId === "veritasFactCheckMultimodal") {
+        } else {
             // Jalankan API Call Multimodal
             const imageUrl = info.srcUrl; 
             const text = info.selectionText || "TIDAK ADA TEKS SOROTAN.";
             result = await runFactCheckMultimodalUrl(imageUrl, text);
         }
 
-        // 2. Setelah API Selesai, kirim hasil ke popup yang sudah terbuka
-        // Gunakan chrome.tabs.sendMessage untuk update ke popup yang sudah terbuka
+        // 2. Setelah API Selesai, kirim hasil ke Floating Panel di halaman aktif
         if (result) {
-            // Kirim notifikasi, simpan hasil, dan update popup yang sudah terbuka
             sendFactCheckNotification(selectedText, result.flag !== 'Error');
             chrome.storage.local.set({'lastFactCheckResult': result});
 
-            // ✅ Langsung update popup
-            chrome.runtime.sendMessage({
-                action: 'updateFinalResult',
+            // ✅ Langsung update Floating Panel di tab aktif
+            chrome.tabs.sendMessage(currentTabId, {
+                action: 'finalResultUpdate', // Aksi di context_result.js
                 resultData: result
             });
+
+            // Jika user membuka popup setelah ini, popup akan ambil dari storage.
         }
     }
 });
