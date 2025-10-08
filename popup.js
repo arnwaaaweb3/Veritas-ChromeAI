@@ -1,4 +1,4 @@
-// popup.js (UPDATED - Loading Spinner Support + Live Reactive Popup Update)
+// popup.js (FINAL & STABIL: Loading Spinner Support + Live Reactive Popup Update)
 document.addEventListener('DOMContentLoaded', initializePopup);
 
 function initializePopup() {
@@ -13,6 +13,7 @@ function initializePopup() {
   chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
 
   chrome.storage.local.get(['isContextualCheck'], (storage) => {
+    // Jika dibuka via Context Menu (isContextualCheck=true), skip splash screen.
     if (storage.isContextualCheck) {
       chrome.storage.local.remove('isContextualCheck');
 
@@ -20,10 +21,11 @@ function initializePopup() {
       if (splash) splash.style.display = 'none';
       if (main) main.classList.add('visible');
 
-      // Langsung tampilkan loading state
+      // Langsung tampilkan loading state atau hasil terakhir
       getFactCheckResult();
       setupUploadListener();
     } else {
+      // Logic default untuk Splash Screen
       if (video) {
         video.pause();
         video.currentTime = 0;
@@ -31,10 +33,10 @@ function initializePopup() {
       }
 
       setTimeout(() => {
-        splash.classList.add('fade-out');
+        if (splash) splash.classList.add('fade-out');
         setTimeout(() => {
-          splash.style.display = 'none';
-          main.classList.add('visible');
+          if (splash) splash.style.display = 'none';
+          if (main) main.classList.add('visible');
           getFactCheckResult();
           setupUploadListener();
         }, fadeOutTime);
@@ -57,7 +59,7 @@ function initializePopup() {
   });
 }
 
-// ✅ Listener utama untuk update hasil dari background
+// ✅ Listener utama untuk update hasil dari background (digunakan untuk update live saat sedang loading)
 function handleLiveResultUpdate(request, sender, sendResponse) {
   if (request.action === 'updateFinalResult' || request.action === 'displayResult') {
     const resultBox = document.getElementById('resultBox');
@@ -129,12 +131,14 @@ function renderLoadingState(resultBox, claim) {
   `;
 }
 
-// ✅ Upload Listener tetap sama
+// ✅ Upload Listener untuk Multimodal Check
 function setupUploadListener() {
   const fileInput = document.getElementById('imageFileInput');
   const textInput = document.getElementById('textClaimInput');
   const uploadStatus = document.getElementById('uploadStatus');
   const submitButton = document.getElementById('submitUploadButton');
+
+  if (!submitButton) return;
 
   submitButton.addEventListener('click', async () => {
     const file = fileInput.files[0];
@@ -147,7 +151,7 @@ function setupUploadListener() {
     }
 
     if (textClaim.length < 5) {
-      uploadStatus.textContent = '❌ Klaim teks wajib diisi.';
+      uploadStatus.textContent = '❌ Klaim teks wajib diisi (minimal 5 karakter).';
       uploadStatus.style.color = 'red';
       return;
     }
@@ -163,14 +167,32 @@ function setupUploadListener() {
       const base64Data = await readFileAsBase64(file);
       const mimeType = file.type;
 
-      uploadStatus.textContent = '⏳ Mengirim ke Gemini...';
+      uploadStatus.textContent = '⏳ Mengirim ke Gemini... (Cek di kolom hasil di atas)';
 
+      // Mengirim pesan ke background.js untuk memulai proses multimodal
       chrome.runtime.sendMessage({
         action: 'multimodalUpload',
         base64: base64Data.split(',')[1],
         mimeType: mimeType,
         claim: textClaim
+      }, (response) => {
+        // Callback untuk mengaktifkan kembali tombol setelah proses selesai (sukses/gagal)
+        submitButton.disabled = false;
+        fileInput.disabled = false;
+        textInput.disabled = false;
+        uploadStatus.textContent = ''; 
+
+        if (response && response.success) {
+            uploadStatus.textContent = '✅ Analisis Selesai!';
+            uploadStatus.style.color = 'green';
+        } else {
+            uploadStatus.textContent = '❌ Gagal Analisis (Cek di kolom hasil di atas)';
+            uploadStatus.style.color = 'red';
+        }
       });
+      
+      // Langsung tampilkan loading state di popup
+      renderLoadingState(document.getElementById('resultBox'), textClaim);
 
     } catch (error) {
       uploadStatus.textContent = `❌ Gagal: ${error.message}`;

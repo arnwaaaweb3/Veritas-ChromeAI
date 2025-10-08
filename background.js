@@ -1,17 +1,55 @@
-// background.js (PATCH KRITIS: Built-in AI Integration)
+// background.js (PATCH FINAL V3: Built-in AI Integration Merged + Error Handling Fixed)
 
-// 🧩 PATCH KRITIS: Import skrip lokal AI
-importScripts('localAI.js'); 
+// 🧩 PATCH KRITIS: Fungsi Local AI dimasukkan langsung ke Background.js
+// --- LOCAL AI HELPER FUNCTIONS (START) ---
 
-// FUNGSI 1: MENGIRIM HASIL KE POPUP (Membuat Popup INSTAN atau Menyimpan Hasil)
-// Diperbarui untuk menerima flag isContextual
+function isLocalAiAvailable() {
+    return (typeof chrome !== 'undefined' && typeof chrome.ai !== 'undefined');
+}
+
+async function runLocalPreProcessing(claimText) {
+    if (!isLocalAiAvailable()) {
+        console.warn("[Veritas LocalAI] Chrome AI tidak tersedia. Melewati pre-processing lokal.");
+        return claimText; // Fallback ke klaim asli
+    }
+
+    try {
+        console.log("[Veritas LocalAI] Mulai pre-processing lokal menggunakan Prompt API.");
+
+        const localPrompt = `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi. Fokus pada fakta inti: "${claimText}"`;
+        
+        const response = await chrome.ai.generateContent({
+            model: 'text_model', 
+            prompt: localPrompt,
+            config: {
+                maxOutputTokens: 128
+            }
+        });
+
+        const simplifiedText = response.text.trim();
+        
+        if (simplifiedText && simplifiedText.length > 5 && simplifiedText.length < claimText.length * 1.5) { 
+             console.log("[Veritas LocalAI] Klaim disederhanakan:", simplifiedText);
+             return simplifiedText;
+        } else {
+             console.warn("[Veritas LocalAI] Hasil penyederhanaan lokal tidak valid. Menggunakan klaim asli.");
+             return claimText;
+        }
+
+    } catch (error) {
+        console.error("[Veritas LocalAI] Gagal menjalankan Prompt API lokal:", error);
+        return claimText; 
+    }
+}
+// --- LOCAL AI HELPER FUNCTIONS (END) ---
+
+
+// FUNGSI 1: MENGIRIM HASIL KE POPUP
 function sendResultToPopup(result, isContextual = false) { 
-    // Simpan hasil utama DAN flag kontekstual
     chrome.storage.local.set({ 
         'lastFactCheckResult': result,
         'isContextualCheck': isContextual 
     }, () => {
-        // Karena kita menggunakan default_popup, kita panggil openPopup
         chrome.action.openPopup(); 
     });
 }
@@ -20,7 +58,7 @@ function sendResultToPopup(result, isContextual = false) {
 function sendFactCheckNotification(claimText, isSuccess) {
     chrome.notifications.create({
         type: 'basic',
-        iconUrl: 'icons/veritas48.png', // Gunakan icon 48x48
+        iconUrl: 'icons/veritas48.png', 
         title: isSuccess ? '✅ Fact Check Selesai!' : '❌ Fact Check Gagal',
         message: isSuccess 
             ? `Klaim: "${claimText}". Klik icon Veritas untuk melihat hasilnya.`
@@ -69,7 +107,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         const isTextMode = info.menuItemId === "veritasFactCheckText";
         const currentTabId = tab.id;
 
-        // 1. KRITIS: Set status Loading DAN kirim ke Floating Panel (context_result.js)
+        // 1. Set status Loading DAN kirim ke Floating Panel (context_result.js)
         const loadingResult = {
             flag: 'loading',
             claim: selectedText,
@@ -79,12 +117,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         // Inject content script (context_result.js) dan kirim status loading
         await chrome.scripting.executeScript({
             target: { tabId: currentTabId },
-            files: ['context_result.js'] // Inject content script kita
+            files: ['context_result.js'] 
         });
         
         // Kirim update loading ke panel yang baru di-inject
         chrome.tabs.sendMessage(currentTabId, { 
-            action: 'finalResultUpdate', // Aksi di context_result.js
+            action: 'finalResultUpdate', 
             resultData: loadingResult 
         });
 
@@ -101,7 +139,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             // Jalankan API Call (Async)
             result = await runFactCheckHybrid(selectedText); 
         } else {
-            // Jalankan API Call Multimodal (Multimodal tetap butuh API Key saat ini)
+            // Jalankan API Call Multimodal 
             const imageUrl = info.srcUrl; 
             const text = info.selectionText || "TIDAK ADA TEKS SOROTAN.";
             result = await runFactCheckMultimodalUrl(imageUrl, text);
@@ -133,11 +171,9 @@ chrome.runtime.onMessage.addListener(
             console.log("[Veritas Upload] Menerima Base64 data dari popup.");
 
             runFactCheckMultimodalDirect(base64, mimeType, claim).then(result => {
-                // Kirim notifikasi, simpan hasil, dan update popup yang sudah terbuka
                 sendFactCheckNotification(claim, result.flag !== 'Error');
                 chrome.storage.local.set({'lastFactCheckResult': result});
 
-                // ✅ Langsung update popup
                 chrome.runtime.sendMessage({
                     action: 'updateFinalResult',
                     resultData: result
@@ -149,7 +185,6 @@ chrome.runtime.onMessage.addListener(
                 sendFactCheckNotification(claim, false);
                 chrome.storage.local.set({'lastFactCheckResult': errorResult});
 
-                // Menggunakan chrome.runtime.sendMessage untuk update popup yang sudah terbuka
                 chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
                 sendResponse({ success: false, error: errorResult });
             });
@@ -161,7 +196,7 @@ chrome.runtime.onMessage.addListener(
 
 // ====================================================================
 // FUNGSI 5: RUN FACT CHECK HYBRID (TEKS ONLY) 
-// 🧩 PATCH KRITIS: Integrasi Pre-processing Lokal & Fallback
+// PATCH FINAL: Integrasi Lokal AI Merged & Perbaikan Validasi Respons Gemini
 // ====================================================================
 
 async function runFactCheckHybrid(text) {
@@ -178,7 +213,7 @@ async function runFactCheckHybrid(text) {
 
                 // Panggil model on-device (sebagai fallback total)
                 const localResult = await chrome.ai.generateContent({
-                    model: 'gemini-flash', // Model on-device terbaik jika tersedia
+                    model: 'gemini-flash', 
                     prompt: localPrompt,
                     config: {
                         maxOutputTokens: 256
@@ -231,7 +266,8 @@ async function runFactCheckHybrid(text) {
 
         const data = await response.json();
         
-        if (data.candidates && data.candidates[0].content) {
+        // 🚨 PATCH FIX: Memeriksa candidates.length > 0 (menghindari TypeError)
+        if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
             const aiResponse = data.candidates[0].content.parts[0].text.trim();
             const upperResponse = aiResponse.toUpperCase();
             
@@ -256,9 +292,17 @@ async function runFactCheckHybrid(text) {
                 debug: JSON.stringify(data.error)
             };
         } else {
+            // NEW VALIDATION: Menangkap respon kosong atau diblokir
+            let detailedError = "Gagal memproses AI. Respons tidak terduga (Kemungkinan API Key bermasalah atau klaim diblokir).";
+            if (data.promptFeedback && data.promptFeedback.blockReason) {
+                detailedError = `Klaim diblokir oleh Safety Filter: ${data.promptFeedback.blockReason}`;
+            } else if (data.candidates && data.candidates.length === 0) {
+                detailedError = "Respons AI kosong. Kemungkinan masalah konfigurasi atau filter keamanan.";
+            }
+
             return {
                 flag: "Error",
-                message: "Gagal memproses AI. Respons tidak terduga.",
+                message: detailedError,
                 debug: JSON.stringify(data)
             };
         }
@@ -280,7 +324,6 @@ async function runFactCheckHybrid(text) {
 async function urlToBase64(url) {
     console.log("[Veritas Multimodal] Fetching image dari URL...");
     
-    // Ini mungkin gagal karena CORS. Untuk hackathon, kita teruskan.
     const response = await fetch(url);
     const blob = await response.blob();
 
@@ -312,11 +355,9 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             return { flag: "Error", message: "API Key Gemini belum diatur. Multimodal saat ini membutuhkan akses Cloud.", claim: "Multimodal Check Failed" };
         }
         
-        // 1. Konversi Gambar ke Base64
         const base64Image = await urlToBase64(imageUrl);
         const mimeType = 'image/jpeg'; 
 
-        // 2. Memanggil fungsi Direct
         return runFactCheckMultimodalDirect(base64Image, mimeType, text);
 
     } catch (error) {
@@ -343,12 +384,10 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
             return { flag: "Error", message: "API Key Gemini belum diatur.", claim: "Multimodal Check Failed" };
         }
         
-        // 1. Prompt Engineering Multimodal (Diperbarui untuk Grounding)
         const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan klaim ini: "${text}", dengan gambar yang diberikan. Cari konteks eksternal di Google (seperti tahun data atau sumber asli) untuk memverifikasi klaim. Jika klaim teks DAN konteks eksternal valid, balas 'FAKTA'. Jika tidak, balas 'MISINFORMASI'. WAJIB sertakan tahun data yang valid jika ditemukan.`;
 
         console.log("[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
 
-        // 2. Susun Payload Multimodal (Kunci Grounding)
         const payload = {
             contents: [
                 {
@@ -375,8 +414,7 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
 
         const data = await response.json();
 
-        // 3. Proses Respon dari Gemini
-        if (data.candidates && data.candidates[0].content) {
+        if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
             const aiResponse = data.candidates[0].content.parts[0].text.trim();
             const upperResponse = aiResponse.toUpperCase();
             
@@ -392,7 +430,14 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
         } else if (data.error) {
             return { flag: "Error", message: `API Error: ${data.error.message}`, debug: JSON.stringify(data.error) };
         } else {
-            return { flag: "Error", message: "Gagal memproses AI. Respons tidak terduga.", debug: JSON.stringify(data) };
+            let detailedError = "Gagal memproses AI. Respons tidak terduga (Kemungkinan API Key bermasalah atau klaim diblokir).";
+            if (data.promptFeedback && data.promptFeedback.blockReason) {
+                detailedError = `Klaim diblokir oleh Safety Filter: ${data.promptFeedback.blockReason}`;
+            } else if (data.candidates && data.candidates.length === 0) {
+                detailedError = "Respons AI kosong. Kemungkinan masalah konfigurasi atau filter keamanan.";
+            }
+
+            return { flag: "Error", message: detailedError, debug: JSON.stringify(data) };
         }
 
     } catch (error) {
