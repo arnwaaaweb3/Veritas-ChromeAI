@@ -10,7 +10,8 @@
     "scripting",
     "declarativeNetRequest",
     "tabs",
-    "notifications"    
+    "notifications",
+    "ai"  
   ],
   "host_permissions": [
     "<all_urls>"         
