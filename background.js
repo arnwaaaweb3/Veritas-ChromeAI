@@ -1,6 +1,5 @@
-// background.js (PATCH FINAL V3: Built-in AI Integration Merged + Error Handling Fixed)
+// background.js (PATCH FINAL V4: Structured Reasoning + Built-in AI Merged)
 
-// 🧩 PATCH KRITIS: Fungsi Local AI dimasukkan langsung ke Background.js
 // --- LOCAL AI HELPER FUNCTIONS (START) ---
 
 function isLocalAiAvailable() {
@@ -196,7 +195,7 @@ chrome.runtime.onMessage.addListener(
 
 // ====================================================================
 // FUNGSI 5: RUN FACT CHECK HYBRID (TEKS ONLY) 
-// PATCH FINAL: Integrasi Lokal AI Merged & Perbaikan Validasi Respons Gemini
+// PATCH FINAL: Integrasi Lokal AI Merged & Custom Formatting
 // ====================================================================
 
 async function runFactCheckHybrid(text) {
@@ -247,7 +246,8 @@ async function runFactCheckHybrid(text) {
         const processedText = await runLocalPreProcessing(text);
         
         // b. Fact Check Utama menggunakan Gemini Cloud (Grounding/Search)
-        const prompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${processedText}", dengan MENCARI INFORMASI REAL-TIME di Google Search. WAJIB sertakan fakta terbaru dari sumber yang Anda temukan untuk mendukung penilaian Anda. Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'. Diikuti dengan alasan singkat dan jelas.`;
+        // 🚨 PROMPT MODIFICATION: Meminta format output yang terstruktur
+        const prompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${processedText}", dengan MENCARI INFORMASI REAL-TIME di Google Search. WAJIB sertakan fakta terbaru dari sumber yang Anda temukan untuk mendukung penilaian Anda. Balas dengan format ini: (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK DI DALAM JAWABAN TEKSMU.`;
         
         console.log("[Veritas Hybrid] Mengirim prompt ke Gemini Cloud (dengan Google Search)...");
 
@@ -269,21 +269,69 @@ async function runFactCheckHybrid(text) {
         // 🚨 PATCH FIX: Memeriksa candidates.length > 0 (menghindari TypeError)
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
             const aiResponse = data.candidates[0].content.parts[0].text.trim();
-            const upperResponse = aiResponse.toUpperCase();
+            const firstLine = aiResponse.split('\n')[0].trim();
             
             let flag = "Kuning"; 
+            let flagSymbol = "🟡 ALERT!";
             
-            if (upperResponse.startsWith("FAKTA")) {
+            if (firstLine.toUpperCase().startsWith("FAKTA")) {
                 flag = "Hijau";
-            } else if (upperResponse.startsWith("MISINFORMASI")) {
+                flagSymbol = "🟢 FACT!";
+            } else if (firstLine.toUpperCase().startsWith("MISINFORMASI")) {
                 flag = "Merah";
+                flagSymbol = "🔴 FALSE!";
             }
+            
+            // --- NEW FORMATTING LOGIC START ---
+            
+            // 1. Ekstrak Reasoning (teks setelah = )
+            const parts = aiResponse.split('=');
+            const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : aiResponse.trim();
+            
+            // 2. Ekstrak Grounding Links
+            const groundingMetadata = data.candidates[0].groundingMetadata;
+            let linksOutput = "\nLink:\n- (Tidak ada sumber eksternal yang terdeteksi)";
+            
+            if (groundingMetadata && groundingMetadata.groundingChunks) {
+                const uniqueLinks = new Map();
+                groundingMetadata.groundingChunks
+                    .filter(chunk => chunk.web && chunk.web.uri)
+                    .forEach(chunk => {
+                        // Coba ambil judul jika ada, kalau tidak, pakai URI
+                        const title = chunk.web.title || chunk.web.uri.split('/')[2];
+                        uniqueLinks.set(chunk.web.uri, title);
+                    });
+                
+                if (uniqueLinks.size > 0) {
+                     linksOutput = "\nLink:";
+                     uniqueLinks.forEach((title, uri) => {
+                         // Memastikan format link Markdown: [Link Title](URL)
+                         linksOutput += `\n- [${title}](${uri})`;
+                     });
+                }
+            }
+
+            // 3. Gabungkan dalam format Markdown yang diinginkan
+            const formattedMessage = `
+${flagSymbol} 
+**"${text}"**
+Reason:
+${rawReasoning}
+${linksOutput}
+            `.trim();
+            
+            saveFactCheckToHistory({
+                flag: flag,
+                message: formattedMessage,
+                claim: text
+            }); 
 
             return {
                 flag: flag,
-                message: aiResponse,
+                message: formattedMessage,
                 claim: text
             };
+            // --- NEW FORMATTING LOGIC END ---
 
         } else if (data.error) {
             return {
@@ -318,7 +366,8 @@ async function runFactCheckHybrid(text) {
 }
 
 // ====================================================================
-// FUNGSI 6: URL KE BASE64 UTILITY (Untuk Multimodal URL)
+// FUNGSI 6, 7, 8 (UrlToBase64, MultimodalUrl, MultimodalDirect)
+// FUNGSI 7 & 8 JUGA MENGGUNAKAN LOGIC FORMATTING YANG SAMA
 // ====================================================================
 
 async function urlToBase64(url) {
@@ -341,10 +390,6 @@ async function urlToBase64(url) {
         reader.readAsDataURL(blob);
     });
 }
-
-// ====================================================================
-// FUNGSI 7: RUN FACT CHECK MULTIMODAL (via URL Klik Kanan)
-// ====================================================================
 
 async function runFactCheckMultimodalUrl(imageUrl, text) {
     try {
@@ -371,10 +416,6 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 }
 
 
-// ====================================================================
-// FUNGSI 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 dari Upload/Fungsi Lain)
-// ====================================================================
-
 async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
     try {
         const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
@@ -384,7 +425,8 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
             return { flag: "Error", message: "API Key Gemini belum diatur.", claim: "Multimodal Check Failed" };
         }
         
-        const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan klaim ini: "${text}", dengan gambar yang diberikan. Cari konteks eksternal di Google (seperti tahun data atau sumber asli) untuk memverifikasi klaim. Jika klaim teks DAN konteks eksternal valid, balas 'FAKTA'. Jika tidak, balas 'MISINFORMASI'. WAJIB sertakan tahun data yang valid jika ditemukan.`;
+        // 🚨 PROMPT MODIFICATION: Meminta format output yang terstruktur
+        const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan klaim ini: "${text}", dengan gambar yang diberikan. Cari konteks eksternal di Google untuk memverifikasi klaim. Balas dengan format ini: (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK DI DALAM JAWABAN TEKSMU.`;
 
         console.log("[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
 
@@ -416,16 +458,67 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
 
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
             const aiResponse = data.candidates[0].content.parts[0].text.trim();
-            const upperResponse = aiResponse.toUpperCase();
+            const firstLine = aiResponse.split('\n')[0].trim();
             
             let flag = "Kuning";
-            if (upperResponse.startsWith("FAKTA")) {
+            let flagSymbol = "🟡 ALERT!";
+            
+            if (firstLine.toUpperCase().startsWith("FAKTA")) {
                 flag = "Hijau";
-            } else if (upperResponse.startsWith("MISINFORMASI")) {
+                flagSymbol = "🟢 FACT!";
+            } else if (firstLine.toUpperCase().startsWith("MISINFORMASI")) {
                 flag = "Merah";
+                flagSymbol = "🔴 FALSE!";
+            }
+            
+            // --- NEW FORMATTING LOGIC START ---
+            
+            // 1. Ekstrak Reasoning (teks setelah = )
+            const parts = aiResponse.split('=');
+            const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : aiResponse.trim();
+            
+            // 2. Ekstrak Grounding Links
+            const groundingMetadata = data.candidates[0].groundingMetadata;
+            let linksOutput = "\nLink:\n- (Tidak ada sumber eksternal yang terdeteksi)";
+            
+            if (groundingMetadata && groundingMetadata.groundingChunks) {
+                const uniqueLinks = new Map();
+                groundingMetadata.groundingChunks
+                    .filter(chunk => chunk.web && chunk.web.uri)
+                    .forEach(chunk => {
+                        const title = chunk.web.title || chunk.web.uri.split('/')[2];
+                        uniqueLinks.set(chunk.web.uri, title);
+                    });
+                
+                if (uniqueLinks.size > 0) {
+                     linksOutput = "\nLink:";
+                     uniqueLinks.forEach((title, uri) => {
+                         linksOutput += `\n- [${title}](${uri})`;
+                     });
+                }
             }
 
-            return { flag: flag, message: aiResponse, claim: text };
+            // 3. Gabungkan dalam format Markdown yang diinginkan
+            const formattedMessage = `
+${flagSymbol} 
+**"${text}"**
+Reason:
+${rawReasoning}
+${linksOutput}
+            `.trim();
+            
+            saveFactCheckToHistory({
+                flag: flag,
+                message: formattedMessage,
+                claim: text
+            });
+
+            return {
+                flag: flag,
+                message: formattedMessage,
+                claim: text
+            };
+            // --- NEW FORMATTING LOGIC END ---
 
         } else if (data.error) {
             return { flag: "Error", message: `API Error: ${data.error.message}`, debug: JSON.stringify(data.error) };
@@ -448,4 +541,36 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
             debug: error.message
         };
     }
+
+// SNIPPET A: Fungsi Penyimpanan History
+
+const HISTORY_KEY = 'veritasHistory';
+const MAX_HISTORY_ITEMS = 20; // Batasi maksimal 20 item
+
+async function saveFactCheckToHistory(result) {
+    if (!result || result.flag === 'Error') return;
+
+    // Tambahkan timestamp
+    const historyItem = {
+        ...result,
+        timestamp: Date.now()
+    };
+
+    // 1. Ambil history yang sudah ada
+    const storage = await chrome.storage.local.get([HISTORY_KEY]);
+    const history = storage[HISTORY_KEY] || [];
+
+    // 2. Tambahkan item baru ke awal array
+    history.unshift(historyItem);
+
+    // 3. Batasi ukuran array
+    if (history.length > MAX_HISTORY_ITEMS) {
+        history.splice(MAX_HISTORY_ITEMS);
+    }
+
+    // 4. Simpan kembali ke storage
+    chrome.storage.local.set({ [HISTORY_KEY]: history });
+    console.log("[Veritas History] Hasil Fact Check berhasil disimpan.");
+}
+
 }

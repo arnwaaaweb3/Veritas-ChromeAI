@@ -14,15 +14,14 @@
       --radius: 10px;
     }
 
-    /* === GLOBAL === */
+    /* === GLOBAL (ORIGINAL) === */
     html, body {
       width: 320px;
-      height: 480px; /* FIX DIMENSI: Tinggi 480px untuk Full View */
+      height: 480px; 
       margin: 0;
       padding: 0;
       font-family: "Inter", "Roboto", sans-serif;
       color: var(--text);
-      /* Background dipindahkan ke #appContainer */
       background: #fff; 
       overflow: hidden;
     }
@@ -32,7 +31,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      /* FIX: Background SVG (mainContent.svg) diterapkan di sini */
+      /* Background SVG tetap di appContainer, jadi dia FIXED */
       background: url("icons/Veritas.svg") no-repeat center top / cover; 
     }
 
@@ -42,7 +41,7 @@
       color: var(--primary);
     }
 
-    /* === SPLASH === */
+    /* === SPLASH (ORIGINAL) === */
     #splashScreen {
       position: absolute;
       inset: 0;
@@ -59,52 +58,33 @@
       z-index: 20; 
     }
 
-    #splashScreen.fade-out {
-      opacity: 0;
-      pointer-events: none;
+    #splashScreen.fade-out { opacity: 0; pointer-events: none; }
+    #splashVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; } 
+    .logo { 
+        width: 72px; 
+        height: 72px; 
+        z-index: 10; 
+        box-shadow: 0 5px 25px rgba(0,0,0,0.3); 
+        border-radius: 16px; 
+        margin-bottom: 15px; 
+        animation: logoFade 5s ease-in-out forwards; 
     }
+    @keyframes logoFade { 0% { opacity: 0; transform: scale(0.95); } 25% { opacity: 1; transform: scale(1); } 75% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.05); } }
 
-    #splashVideo {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: 1;
-    } 
 
-    .logo {
-      width: 72px;
-      height: 72px;
-      z-index: 10;
-      box-shadow: 0 5px 25px rgba(0,0,0,0.3);
-      border-radius: 16px;
-      margin-bottom: 15px;
-      animation: logoFade 5s ease-in-out forwards;
-    }
-
-    @keyframes logoFade {
-      0% { opacity: 0; transform: scale(0.95); }
-      25% { opacity: 1; transform: scale(1); }
-      75% { opacity: 1; transform: scale(1); }
-      100% { opacity: 0; transform: scale(1.05); }
-    }
-
-    /* === HEADER BAR & TOP LOGO (NEW) === */
+    /* === HEADER BAR & TOP LOGO (FIXED POSITION) === */
     #topHeader {
-        /* Memposisikan Header Bar di Sudut Kanan Atas */
-        position: absolute; 
+        position: fixed; /* Kriteria 2: FIXED POSITION */
         top: 16px;
         right: 16px;
         display: flex;
         align-items: center;
-        gap: 8px; /* Jarak antara teks dan logo */
-        z-index: 10; 
+        gap: 8px;
+        z-index: 30; /* Tingkatkan z-index agar pasti di atas */
     }
 
     .topLogo {
-        width: 36px; /* FIX DIMENSI: Disinkronkan ke 36px */
+        width: 36px;
         height: 36px;
         border-radius: 8px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.2);
@@ -114,19 +94,16 @@
         transition: transform 0.2s ease;
     }
 
-    .topLogo:hover {
-      transform: scale(1.08);
-    }
+    .topLogo:hover { transform: scale(1.08); }
     
     .topText {
-        /* FIX DIMENSI: Disinkronkan dengan logo */
-        height: 75px; 
+        height: 75px;
         opacity: 0.9;
-        flex-shrink: 0; /* Pastikan teks tidak menyusut */
+        flex-shrink: 0; 
     }
 
 
-    /* === MAIN CONTENT === */
+    /* === MAIN CONTENT (SCROLLABLE AREA) === */
     #mainContent {
       position: absolute;
       inset: 0;
@@ -136,42 +113,146 @@
       opacity: 0;
       transform: translateY(10px);
       transition: opacity 0.8s ease, transform 0.8s ease;
-      overflow-y: auto;
-      /* FIX: Tambahkan background putih transparan agar konten terbaca di atas SVG background */
+      overflow-y: auto; 
       background: rgba(255, 255, 255, 0.5); 
       box-sizing: border-box;
     }
 
+    #mainContent.visible { opacity: 1; transform: translateY(0); }
 
-    #mainContent.visible {
-      opacity: 1;
-      transform: translateY(0);
+    /* === NEW RESULT CONTAINERS (Dipertahankan) === */
+
+    /* Container Status Utama (Flag & Klaim) */
+    #resultHeader {
+        margin-top: 75px; /* Kriteria 1: Tambah Jarak (50px -> 75px) */
+        padding: 12px;
+        border-radius: var(--radius);
+        font-weight: 600;
+        font-size: 18px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
     }
 
-    #claimText {
-      display: block;
-      font-style: italic;
-      margin-bottom: 8px;
-      color: #444;
-      margin-top: 50px; 
+    .flag-symbol {
+        font-size: 24px;
+        margin-right: 10px;
+        line-height: 1;
     }
 
-    .result-box {
-      border-radius: var(--radius);
-      padding: 12px;
-      font-weight: 500;
-      font-size: 14px;
-      background-color: rgba(255, 255, 255, 0.9);
-      border-left: 4px solid var(--primary);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    /* Container untuk Klaim (Kriteria 2) */
+    #claimDisplay {
+        font-style: italic;
+        margin-top: 10px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background-color: var(--neutral);
+        border-radius: var(--radius);
+        border-left: 3px solid var(--primary);
+        font-size: 14px;
     }
 
-    .Merah { border-left-color: var(--danger); color: var(--danger); background: #fde8e8; }
-    .Kuning { border-left-color: var(--warning); color: #b57f00; background: #fff8d6; }
-    .Hijau { border-left-color: var(--secondary); color: var(--secondary); background: #e7f8ec; }
-    .Error { border-left-color: #777; color: #555; background: #f1f1f1; }
+    /* Container untuk Reasoning (Kriteria 3) */
+    #reasoningBox {
+        padding: 12px;
+        background-color: #ffffff;
+        border-radius: var(--radius);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        margin-bottom: 15px;
+        font-size: 13px;
+    }
+    
+    #reasoningBox p { margin: 0; font-weight: bold; }
 
-    /* === Upload Section === */
+    /* List Styling untuk Reasoning */
+    #reasoningBox ul {
+        list-style: none;
+        padding: 0;
+        margin-top: 5px;
+    }
+    #reasoningBox li {
+        margin-bottom: 8px;
+        padding-left: 15px;
+        position: relative;
+        line-height: 1.4;
+    }
+    /* Poin Bulet Kustom */
+    #reasoningBox li::before {
+        content: "•"; 
+        color: var(--primary); 
+        font-weight: bold;
+        display: inline-block; 
+        width: 1em;
+        margin-left: -1em;
+    }
+
+
+    /* Container untuk Link (Kriteria 5) */
+    #linkBox {
+        padding: 12px;
+        background-color: #f7f7f7;
+        border-radius: var(--radius);
+        border: 1px solid #ddd;
+        font-size: 13px;
+    }
+
+    #linkBox p { margin: 0; font-weight: bold; color: #555; } 
+
+    #linkBox ul {
+        list-style: none; 
+        padding: 0;
+        margin-top: 5px;
+    }
+    #linkBox li {
+        margin-bottom: 5px;
+    }
+    #linkBox a {
+        word-break: break-all;
+    }
+
+    /* Color Scheme for Results */
+    .Merah { color: var(--danger); background-color: #fde8e8; }
+    .Hijau { color: var(--secondary); background-color: #e7f8ec; }
+    .Kuning { color: #b57f00; background-color: #fff8d6; }
+    .Error { color: #555; background-color: #f1f1f1; }
+
+    /* Loading State Styling */
+    #loadingState {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        border-radius: var(--radius);
+        background: rgba(240, 240, 255, 0.9);
+        color: var(--primary);
+        text-align: center;
+        margin-top: 50px;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid #ddd;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+    }
+
+    .smallText {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+
+    /* === Upload Section (ORIGINAL STYLES RESTORED) === */
     #uploadSection {
       border-top: 1px solid #eee;
       margin-top: 18px;
@@ -214,7 +295,7 @@
     button:hover {
       background: #3367d6;
     }
-
+    
     #uploadStatus {
       margin-top: 10px;
       font-weight: bold;
@@ -222,38 +303,47 @@
       text-align: center;
     }
 
-    .result-box.loading {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      border-left-color: var(--primary);
-      color: var(--primary);
-      background: rgba(240, 240, 255, 0.9);
-      text-align: center;
-      padding: 20px;
+    #historyList .history-item {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: var(--radius);
+      border-left: 4px solid #aaa;
+      background: #fcfcfc;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      cursor: pointer;
+      transition: background 0.2s;
     }
 
-    .spinner {
-      width: 36px;
-      height: 36px;
-      border: 4px solid #ddd;
-      border-top: 4px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 10px;
+    #historyList .history-item:hover {
+      background: #f0f0f0;
     }
 
-    .smallText {
+    #historyList .history-item.Hijau { border-left-color: var(--secondary); }
+    #historyList .history-item.Merah { border-left-color: var(--danger); }
+    #historyList .history-item.Kuning { border-left-color: var(--warning); }
+
+    .history-timestamp {
+      display: block;
+      font-size: 10px;
+      color: #999;
+      margin-bottom: 5px;
+    }
+    .history-claim {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    .history-flag {
       font-size: 12px;
-      color: #666;
-      margin-top: 4px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin-top: 5px;
+      display: inline-block;
     }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    .history-flag.Hijau { background: var(--secondary); color: white; }
+    .history-flag.Merah { background: var(--danger); color: white; }
+    .history-flag.Kuning { background: var(--warning); color: #555; }
 
   </style>
 </head>
@@ -274,16 +364,28 @@
             <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="topLogo">
         </div>
 
-        <span id="claimText"></span>
-        <div id="resultBox" class="result-box">Memuat hasil...</div>
-
-        <div id="uploadSection">
-            <h4>Cek Fakta dari Gambar Lokal:</h4>
-            <textarea id="textClaimInput" placeholder="Masukkan klaim terkait gambar..."></textarea>
-            <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
-            <button id="submitUploadButton">Analisis Gambar</button>
-            <div id="uploadStatus"></div>
+        <div id="tabNav" style="display: flex; justify-content: space-around; margin-top: 55px; margin-bottom: 10px; flex-shrink: 0; background: #fff; padding: 5px 0; border-radius: var(--radius);">
+          <button id="tabFactCheck" class="tab-button" style="border: none; background: none; font-weight: bold; padding: 5px 10px; cursor: pointer; color: var(--primary); border-bottom: 2px solid var(--primary);">Fact Check</button>
+          <button id="tabHistory" class="tab-button" style="border: none; background: none; font-weight: bold; padding: 5px 10px; cursor: pointer; color: #aaa;">History</button>
         </div>
+
+    <div id="tabContent">
+       <div id="factCheckTab">
+          <div id="loadingState" style="display:none; margin-top: 20px;">
+          </div>
+
+          <div id="resultOutput" style="display:none;">
+          </div>
+
+          <div id="uploadSection" style="flex-shrink: 0;">
+          </div>
+        </div>
+
+      <div id="historyTab" style="display: none; padding-top: 10px;">
+        <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
+        <div id="historyList">
+        </div>
+      </div>
     </div>
 
   </div>
