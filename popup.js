@@ -175,20 +175,22 @@ function switchTab(tabName) {
     if (tabName === 'history') {
         factCheckTab.style.display = 'none';
         historyTab.style.display = 'block';
-        tabFCButton.style.borderBottom = 'none';
-        tabHButton.style.borderBottom = `2px solid var(--primary)`;
-        tabHButton.style.color = 'var(--primary)';
-        tabFCButton.style.color = '#aaa';
+        
+        // --- Perubahan Style di Sini ---
+        tabFCButton.classList.remove('active');
+        tabHButton.classList.add('active');
+        // --- End Perubahan Style ---
         
         renderHistory();
         
     } else { // 'factCheck'
         factCheckTab.style.display = 'block';
         historyTab.style.display = 'none';
-        tabHButton.style.borderBottom = 'none';
-        tabFCButton.style.borderBottom = `2px solid var(--primary)`;
-        tabFCButton.style.color = 'var(--primary)';
-        tabHButton.style.color = '#aaa';
+        
+        // --- Perubahan Style di Sini ---
+        tabHButton.classList.remove('active');
+        tabFCButton.classList.add('active');
+        // --- End Perubahan Style ---
     }
 }
 
@@ -238,6 +240,24 @@ async function renderHistory() {
 
         historyList.appendChild(itemDiv);
     });
+  
+}
+
+// SNIPPET 4C: Fungsi clearHistory di popup.js
+async function clearHistory() {
+    if (confirm("Apakah Anda yakin ingin menghapus SEMUA riwayat pengecekan fakta? Aksi ini tidak dapat dibatalkan.")) {
+        
+        // Hapus array History dari local storage
+        chrome.storage.local.remove(HISTORY_KEY, () => {
+            // Setelah dihapus, refresh tampilan history
+            renderHistory(); 
+            
+            // Beri notifikasi ke user
+            const status = document.getElementById('historyStatus');
+            status.textContent = '✅ Semua riwayat berhasil dihapus!';
+            status.style.display = 'block';
+        });
+    }
 }
 // --- HISTORY LOGIC (END) ---
 
@@ -304,6 +324,10 @@ function initializePopup() {
     document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
     switchTab('factCheck'); // Set default tab
   });
+
+  // SNIPPET 4B: Listener di popup.js
+  document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
+
 }
 
 

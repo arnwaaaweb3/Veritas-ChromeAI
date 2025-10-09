@@ -124,7 +124,7 @@
 
     /* Container Status Utama (Flag & Klaim) */
     #resultHeader {
-        margin-top: 75px; /* Kriteria 1: Tambah Jarak */
+        margin-top: 0px;
         padding: 12px;
         border-radius: var(--radius);
         font-weight: 600;
@@ -346,6 +346,23 @@
     .history-flag.Merah { background: var(--danger); color: white; }
     .history-flag.Kuning { background: var(--warning); color: #555; }
 
+    #tabNav button {
+      border: none;
+      background: transparent;
+      font-weight: 600;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 20px; /* Bentuk pill */
+      color: #555;
+      flex-grow: 1; /* Agar membagi lebar sama rata */
+    }
+
+    #tabNav button.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
 
   </style>
 </head>
@@ -367,8 +384,6 @@
         </div>
 
         <div id="tabNav" style="display: flex; justify-content: space-around; margin-top: 55px; margin-bottom: 10px; flex-shrink: 0; background: #fff; padding: 5px 0; border-radius: var(--radius);">
-          <button id="tabFactCheck" class="tab-button" style="border: none; background: none; font-weight: bold; padding: 5px 10px; cursor: pointer; color: var(--primary); border-bottom: 2px solid var(--primary);">Fact Check</button>
-          <button id="tabHistory" class="tab-button" style="border: none; background: none; font-weight: bold; padding: 5px 10px; cursor: pointer; color: #aaa;">History</button>
         </div>
 
         <div id="tabContent">
@@ -398,9 +413,10 @@
             </div>
             
             <div id="historyTab" style="display: none; padding-top: 10px;">
-                <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
-                <div id="historyList">
-                    </div>
+              <button id="clearHistoryButton" style="width: 100%; background: var(--danger); margin-bottom: 15px;">Hapus Semua Riwayat</button>
+              <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
+              <div id="historyList">
+              </div>
             </div>
         </div>
 
