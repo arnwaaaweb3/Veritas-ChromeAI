@@ -124,7 +124,7 @@
 
     /* Container Status Utama (Flag & Klaim) */
     #resultHeader {
-        margin-top: 75px; /* Kriteria 1: Tambah Jarak (50px -> 75px) */
+        margin-top: 75px; /* Kriteria 1: Tambah Jarak */
         padding: 12px;
         border-radius: var(--radius);
         font-weight: 600;
@@ -303,6 +303,7 @@
       text-align: center;
     }
 
+    /* === HISTORY CSS (DITAMBAHKAN) === */
     #historyList .history-item {
       margin-bottom: 15px;
       padding: 10px;
@@ -345,6 +346,7 @@
     .history-flag.Merah { background: var(--danger); color: white; }
     .history-flag.Kuning { background: var(--warning); color: #555; }
 
+
   </style>
 </head>
 <body>
@@ -369,23 +371,39 @@
           <button id="tabHistory" class="tab-button" style="border: none; background: none; font-weight: bold; padding: 5px 10px; cursor: pointer; color: #aaa;">History</button>
         </div>
 
-    <div id="tabContent">
-       <div id="factCheckTab">
-          <div id="loadingState" style="display:none; margin-top: 20px;">
-          </div>
+        <div id="tabContent">
+            
+            <div id="factCheckTab">
+              
+              <div id="loadingState" style="display:none; margin-top: 20px;">
+                  <div class="spinner"></div>
+                  <p><strong>Memverifikasi klaim...</strong></p>
+                  <p id="loadingClaimText" class="smallText"></p>
+              </div>
 
-          <div id="resultOutput" style="display:none;">
-          </div>
+              <div id="resultOutput" style="display:none;">
+                  <div id="resultHeader"></div>
+                  <div id="claimDisplay"></div>
+                  <div id="reasoningBox"></div>
+                  <div id="linkBox"></div>
+              </div>
 
-          <div id="uploadSection" style="flex-shrink: 0;">
-          </div>
+              <div id="uploadSection" style="flex-shrink: 0;">
+                  <h4>Cek Fakta dari Gambar Lokal:</h4>
+                  <textarea id="textClaimInput" placeholder="Masukkan klaim terkait gambar..."></textarea>
+                  <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
+                  <button id="submitUploadButton">Analisis Gambar</button>
+                  <div id="uploadStatus"></div>
+              </div>
+            </div>
+            
+            <div id="historyTab" style="display: none; padding-top: 10px;">
+                <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
+                <div id="historyList">
+                    </div>
+            </div>
         </div>
 
-      <div id="historyTab" style="display: none; padding-top: 10px;">
-        <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
-        <div id="historyList">
-        </div>
-      </div>
     </div>
 
   </div>

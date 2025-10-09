@@ -1,5 +1,7 @@
-// popup.js (FINAL & STABIL: Structured Reasoning Rendering)
+// popup.js (FINAL & STABIL: Structured Reasoning Rendering + History Fixes)
 document.addEventListener('DOMContentLoaded', initializePopup);
+
+const HISTORY_KEY = 'veritasHistory'; // Deklarasi HISTORY_KEY
 
 // Utility untuk memisahkan hasil Markdown (sesuai format baru di background.js)
 function parseAndRenderResult(result, claimText, resultOutputDiv) {
@@ -21,8 +23,6 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const linkDiv = document.getElementById('linkBox');
     
     // --- Parsing Logic ---
-    
-    // Pattern yang kita cari: [FlagSymbol] **"[Klaim]"** Reason:\n[Alasan]\nLink:\n[Link]
     
     // Pisahkan berdasarkan header: Reason: dan Link:
     const reasonSplit = rawMessage.split('Reason:');
@@ -108,6 +108,10 @@ function renderLoadingState(resultBox, claim) {
     const loadingDiv = document.getElementById('loadingState');
     const outputDiv = document.getElementById('resultOutput');
     const claimText = document.getElementById('loadingClaimText');
+    const factCheckTab = document.getElementById('factCheckTab');
+
+    // Pastikan Fact Check tab terlihat saat loading
+    factCheckTab.style.display = 'block';
 
     outputDiv.style.display = 'none';
     loadingDiv.style.display = 'flex';
@@ -160,14 +164,92 @@ function getFactCheckResult() {
   });
 }
 
-// --- INITIALIZATION ---
+// --- HISTORY LOGIC (START) ---
+
+function switchTab(tabName) {
+    const factCheckTab = document.getElementById('factCheckTab');
+    const historyTab = document.getElementById('historyTab');
+    const tabFCButton = document.getElementById('tabFactCheck');
+    const tabHButton = document.getElementById('tabHistory');
+
+    if (tabName === 'history') {
+        factCheckTab.style.display = 'none';
+        historyTab.style.display = 'block';
+        tabFCButton.style.borderBottom = 'none';
+        tabHButton.style.borderBottom = `2px solid var(--primary)`;
+        tabHButton.style.color = 'var(--primary)';
+        tabFCButton.style.color = '#aaa';
+        
+        renderHistory();
+        
+    } else { // 'factCheck'
+        factCheckTab.style.display = 'block';
+        historyTab.style.display = 'none';
+        tabHButton.style.borderBottom = 'none';
+        tabFCButton.style.borderBottom = `2px solid var(--primary)`;
+        tabFCButton.style.color = 'var(--primary)';
+        tabHButton.style.color = '#aaa';
+    }
+}
+
+async function renderHistory() {
+    const historyList = document.getElementById('historyList');
+    const status = document.getElementById('historyStatus');
+
+    historyList.innerHTML = '';
+    status.textContent = 'Memuat riwayat...';
+    status.style.display = 'block';
+
+    const storage = await chrome.storage.local.get([HISTORY_KEY]);
+    const history = storage[HISTORY_KEY] || [];
+
+    if (history.length === 0) {
+        status.textContent = 'Belum ada riwayat pengecekan fakta.';
+        return;
+    }
+
+    status.style.display = 'none';
+
+    history.forEach((item, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = `history-item ${item.flag}`;
+        
+        // Ambil summary singkat dari reasoning (teks setelah Flag)
+        const summary = item.message.split('Reason:')[0].replace(/\*\*(.*?)\*\*/, '').trim().substring(0, 100) + '...';
+
+        const date = new Date(item.timestamp).toLocaleString();
+
+        itemDiv.innerHTML = `
+            <span class="history-timestamp">${date}</span>
+            <div class="history-claim">${item.claim.substring(0, 50)}...</div>
+            <div style="font-size: 12px; color: #444;">${summary}</div>
+            <span class="history-flag ${item.flag}">${item.flag.toUpperCase()}</span>
+        `;
+        
+        // Event listener untuk memuat kembali item dari history ke Fact Check tab
+        itemDiv.addEventListener('click', () => {
+            // Kita gunakan logic dari handleLiveResultUpdate untuk menampilkan data
+            handleLiveResultUpdate({
+                action: 'displayResult', 
+                resultData: item 
+            });
+            switchTab('factCheck'); // Kembali ke Fact Check tab
+        });
+
+        historyList.appendChild(itemDiv);
+    });
+}
+// --- HISTORY LOGIC (END) ---
+
+
+// --- INITIALIZATION (FIXED) ---
 
 function initializePopup() {
   const splash = document.getElementById('splashScreen');
   const main = document.getElementById('mainContent');
   const video = document.getElementById('splashVideo');
 
-  const splashDuration = 5000; 
+  const splashDuration = 5000;
   const fadeOutTime = 500;
 
   chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
@@ -180,14 +262,9 @@ function initializePopup() {
       if (splash) splash.style.display = 'none';
       if (main) main.classList.add('visible');
 
-      document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
-      document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
-    
-      // Default: tampilkan Fact Check tab
-      switchTab('factCheck');
-
       getFactCheckResult();
       setupUploadListener();
+      // Tab initialization moved outside
     } else {
       if (video) {
         video.pause();
@@ -202,6 +279,7 @@ function initializePopup() {
           if (main) main.classList.add('visible');
           getFactCheckResult();
           setupUploadListener();
+          // Tab initialization moved outside
         }, fadeOutTime);
       }, splashDuration);
 
@@ -214,11 +292,17 @@ function initializePopup() {
               main.classList.add('visible');
               getFactCheckResult();
               setupUploadListener();
+              // Tab initialization moved outside
             }, fadeOutTime);
           }
         });
       }
     }
+    
+    // FIX BUG KRITIS #2: Initialization tombol tab dipindahkan ke luar conditional
+    document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
+    document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
+    switchTab('factCheck'); // Set default tab
   });
 }
 
@@ -301,80 +385,4 @@ function readFileAsBase64(file) {
     reader.onerror = (error) => reject(error);
     reader.readAsDataURL(file);
   });
-}
-
-const HISTORY_KEY = 'veritasHistory';
-
-function switchTab(tabName) {
-    const factCheckTab = document.getElementById('factCheckTab');
-    const historyTab = document.getElementById('historyTab');
-    const tabFCButton = document.getElementById('tabFactCheck');
-    const tabHButton = document.getElementById('tabHistory');
-
-    if (tabName === 'history') {
-        factCheckTab.style.display = 'none';
-        historyTab.style.display = 'block';
-        tabFCButton.style.borderBottom = 'none';
-        tabHButton.style.borderBottom = `2px solid var(--primary)`;
-        tabHButton.style.color = 'var(--primary)';
-        tabFCButton.style.color = '#aaa';
-        
-        // Render history saat tab dibuka
-        renderHistory();
-        
-    } else { // 'factCheck'
-        factCheckTab.style.display = 'block';
-        historyTab.style.display = 'none';
-        tabHButton.style.borderBottom = 'none';
-        tabFCButton.style.borderBottom = `2px solid var(--primary)`;
-        tabFCButton.style.color = 'var(--primary)';
-        tabHButton.style.color = '#aaa';
-    }
-}
-
-async function renderHistory() {
-    const historyList = document.getElementById('historyList');
-    const status = document.getElementById('historyStatus');
-
-    historyList.innerHTML = '';
-    status.textContent = 'Memuat riwayat...';
-
-    const storage = await chrome.storage.local.get([HISTORY_KEY]);
-    const history = storage[HISTORY_KEY] || [];
-
-    if (history.length === 0) {
-        status.textContent = 'Belum ada riwayat pengecekan fakta.';
-        return;
-    }
-
-    status.style.display = 'none';
-
-    history.forEach((item, index) => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = `history-item ${item.flag}`;
-        
-        // Ambil summary singkat dari reasoning (sebelum Reason:)
-        const summary = item.message.split('Reason:')[0].replace(/\*\*(.*?)\*\*/, '').trim().substring(0, 100) + '...';
-
-        const date = new Date(item.timestamp).toLocaleString();
-
-        itemDiv.innerHTML = `
-            <span class="history-timestamp">${date}</span>
-            <div class="history-claim">${item.claim.substring(0, 50)}...</div>
-            <div style="font-size: 12px; color: #444;">${summary}</div>
-            <span class="history-flag ${item.flag}">${item.flag.toUpperCase()}</span>
-        `;
-        
-        // Event listener untuk memuat kembali item dari history ke Fact Check tab
-        itemDiv.addEventListener('click', () => {
-            // Kita gunakan logic dari handleLiveResultUpdate untuk menampilkan data
-            handleLiveResultUpdate({
-                action: 'displayResult', 
-                resultData: item 
-            });
-            switchTab('factCheck'); // Kembali ke Fact Check tab
-        });
-
-        historyList.appendChild(itemDiv);
-    });
 }

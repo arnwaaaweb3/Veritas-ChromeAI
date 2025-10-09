@@ -1,7 +1,6 @@
-// background.js (PATCH FINAL V4: Structured Reasoning + Built-in AI Merged)
+// background.js (PATCH FINAL V5: Structured Reasoning + History Logic)
 
 // --- LOCAL AI HELPER FUNCTIONS (START) ---
-
 function isLocalAiAvailable() {
     return (typeof chrome !== 'undefined' && typeof chrome.ai !== 'undefined');
 }
@@ -9,20 +8,17 @@ function isLocalAiAvailable() {
 async function runLocalPreProcessing(claimText) {
     if (!isLocalAiAvailable()) {
         console.warn("[Veritas LocalAI] Chrome AI tidak tersedia. Melewati pre-processing lokal.");
-        return claimText; // Fallback ke klaim asli
+        return claimText;
     }
 
     try {
         console.log("[Veritas LocalAI] Mulai pre-processing lokal menggunakan Prompt API.");
-
         const localPrompt = `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi. Fokus pada fakta inti: "${claimText}"`;
         
         const response = await chrome.ai.generateContent({
             model: 'text_model', 
             prompt: localPrompt,
-            config: {
-                maxOutputTokens: 128
-            }
+            config: { maxOutputTokens: 128 }
         });
 
         const simplifiedText = response.text.trim();
@@ -41,6 +37,32 @@ async function runLocalPreProcessing(claimText) {
     }
 }
 // --- LOCAL AI HELPER FUNCTIONS (END) ---
+
+// --- HISTORY LOGIC (START) ---
+const HISTORY_KEY = 'veritasHistory';
+const MAX_HISTORY_ITEMS = 20;
+
+async function saveFactCheckToHistory(result) {
+    if (!result || result.flag === 'Error') return;
+
+    const historyItem = {
+        ...result,
+        timestamp: Date.now()
+    };
+
+    const storage = await chrome.storage.local.get([HISTORY_KEY]);
+    const history = storage[HISTORY_KEY] || [];
+
+    history.unshift(historyItem);
+
+    if (history.length > MAX_HISTORY_ITEMS) {
+        history.splice(MAX_HISTORY_ITEMS);
+    }
+
+    chrome.storage.local.set({ [HISTORY_KEY]: history });
+    console.log("[Veritas History] Hasil Fact Check berhasil disimpan.");
+}
+// --- HISTORY LOGIC (END) ---
 
 
 // FUNGSI 1: MENGIRIM HASIL KE POPUP
@@ -210,13 +232,10 @@ async function runFactCheckHybrid(text) {
 
                 const localPrompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${text}", berdasarkan pengetahuan internal Anda. Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'. Diikuti dengan alasan singkat dan jelas.`;
 
-                // Panggil model on-device (sebagai fallback total)
                 const localResult = await chrome.ai.generateContent({
                     model: 'gemini-flash', 
                     prompt: localPrompt,
-                    config: {
-                        maxOutputTokens: 256
-                    }
+                    config: { maxOutputTokens: 256 }
                 });
 
                 const aiResponse = localResult.text.trim();
@@ -225,14 +244,18 @@ async function runFactCheckHybrid(text) {
                 if (upperResponse.startsWith("FAKTA")) { flag = "Hijau"; } 
                 else if (upperResponse.startsWith("MISINFORMASI")) { flag = "Merah"; }
 
-                return {
+                const finalResult = {
                     flag: flag,
                     message: aiResponse + " [VERIFIKASI INI HANYA BERDASARKAN PENGETAHUAN LOKAL/INTERNAL CHROME. Mohon masukkan API Key untuk verifikasi Real-Time (Grounding).]",
                     claim: text
                 };
+                
+                // PANGGIL HISTORY
+                saveFactCheckToHistory(finalResult);
+                
+                return finalResult;
             }
 
-            // Gagal total (tidak ada Key & tidak ada AI Lokal)
             return { 
                 flag: "Error", 
                 message: "API Key Gemini belum diatur. Buka Pengaturan Veritas (klik kanan ikon ekstensi > Options) dan simpan API Key kamu. (Gagal menggunakan AI Lokal/Cloud)",
@@ -242,11 +265,8 @@ async function runFactCheckHybrid(text) {
         
         // --- 2. JIKA API KEY ADA: Gunakan pipeline Local Pre-processing + Cloud Fact Check ---
         
-        // a. Pre-processing Lokal (menggunakan Prompt API/model On-Device)
         const processedText = await runLocalPreProcessing(text);
         
-        // b. Fact Check Utama menggunakan Gemini Cloud (Grounding/Search)
-        // 🚨 PROMPT MODIFICATION: Meminta format output yang terstruktur
         const prompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${processedText}", dengan MENCARI INFORMASI REAL-TIME di Google Search. WAJIB sertakan fakta terbaru dari sumber yang Anda temukan untuk mendukung penilaian Anda. Balas dengan format ini: (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK DI DALAM JAWABAN TEKSMU.`;
         
         console.log("[Veritas Hybrid] Mengirim prompt ke Gemini Cloud (dengan Google Search)...");
@@ -284,11 +304,9 @@ async function runFactCheckHybrid(text) {
             
             // --- NEW FORMATTING LOGIC START ---
             
-            // 1. Ekstrak Reasoning (teks setelah = )
             const parts = aiResponse.split('=');
             const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : aiResponse.trim();
             
-            // 2. Ekstrak Grounding Links
             const groundingMetadata = data.candidates[0].groundingMetadata;
             let linksOutput = "\nLink:\n- (Tidak ada sumber eksternal yang terdeteksi)";
             
@@ -297,7 +315,6 @@ async function runFactCheckHybrid(text) {
                 groundingMetadata.groundingChunks
                     .filter(chunk => chunk.web && chunk.web.uri)
                     .forEach(chunk => {
-                        // Coba ambil judul jika ada, kalau tidak, pakai URI
                         const title = chunk.web.title || chunk.web.uri.split('/')[2];
                         uniqueLinks.set(chunk.web.uri, title);
                     });
@@ -305,13 +322,11 @@ async function runFactCheckHybrid(text) {
                 if (uniqueLinks.size > 0) {
                      linksOutput = "\nLink:";
                      uniqueLinks.forEach((title, uri) => {
-                         // Memastikan format link Markdown: [Link Title](URL)
                          linksOutput += `\n- [${title}](${uri})`;
                      });
                 }
             }
 
-            // 3. Gabungkan dalam format Markdown yang diinginkan
             const formattedMessage = `
 ${flagSymbol} 
 **"${text}"**
@@ -320,17 +335,16 @@ ${rawReasoning}
 ${linksOutput}
             `.trim();
             
-            saveFactCheckToHistory({
-                flag: flag,
-                message: formattedMessage,
-                claim: text
-            }); 
-
-            return {
+            const finalResult = {
                 flag: flag,
                 message: formattedMessage,
                 claim: text
             };
+            
+            // PANGGIL HISTORY
+            saveFactCheckToHistory(finalResult);
+
+            return finalResult;
             // --- NEW FORMATTING LOGIC END ---
 
         } else if (data.error) {
@@ -340,7 +354,6 @@ ${linksOutput}
                 debug: JSON.stringify(data.error)
             };
         } else {
-            // NEW VALIDATION: Menangkap respon kosong atau diblokir
             let detailedError = "Gagal memproses AI. Respons tidak terduga (Kemungkinan API Key bermasalah atau klaim diblokir).";
             if (data.promptFeedback && data.promptFeedback.blockReason) {
                 detailedError = `Klaim diblokir oleh Safety Filter: ${data.promptFeedback.blockReason}`;
@@ -366,8 +379,7 @@ ${linksOutput}
 }
 
 // ====================================================================
-// FUNGSI 6, 7, 8 (UrlToBase64, MultimodalUrl, MultimodalDirect)
-// FUNGSI 7 & 8 JUGA MENGGUNAKAN LOGIC FORMATTING YANG SAMA
+// FUNGSI 6: URL KE BASE64 UTILITY (Untuk Multimodal URL)
 // ====================================================================
 
 async function urlToBase64(url) {
@@ -390,6 +402,10 @@ async function urlToBase64(url) {
         reader.readAsDataURL(blob);
     });
 }
+
+// ====================================================================
+// FUNGSI 7: RUN FACT CHECK MULTIMODAL (via URL Klik Kanan)
+// ====================================================================
 
 async function runFactCheckMultimodalUrl(imageUrl, text) {
     try {
@@ -416,6 +432,11 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 }
 
 
+// ====================================================================
+// FUNGSI 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 dari Upload/Fungsi Lain)
+// PATCH FINAL: Multimodal Logic + History Save Fix
+// ====================================================================
+
 async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
     try {
         const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
@@ -425,7 +446,6 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
             return { flag: "Error", message: "API Key Gemini belum diatur.", claim: "Multimodal Check Failed" };
         }
         
-        // 🚨 PROMPT MODIFICATION: Meminta format output yang terstruktur
         const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan klaim ini: "${text}", dengan gambar yang diberikan. Cari konteks eksternal di Google untuk memverifikasi klaim. Balas dengan format ini: (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK DI DALAM JAWABAN TEKSMU.`;
 
         console.log("[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
@@ -473,11 +493,9 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
             
             // --- NEW FORMATTING LOGIC START ---
             
-            // 1. Ekstrak Reasoning (teks setelah = )
             const parts = aiResponse.split('=');
             const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : aiResponse.trim();
             
-            // 2. Ekstrak Grounding Links
             const groundingMetadata = data.candidates[0].groundingMetadata;
             let linksOutput = "\nLink:\n- (Tidak ada sumber eksternal yang terdeteksi)";
             
@@ -498,7 +516,6 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
                 }
             }
 
-            // 3. Gabungkan dalam format Markdown yang diinginkan
             const formattedMessage = `
 ${flagSymbol} 
 **"${text}"**
@@ -507,17 +524,16 @@ ${rawReasoning}
 ${linksOutput}
             `.trim();
             
-            saveFactCheckToHistory({
-                flag: flag,
-                message: formattedMessage,
-                claim: text
-            });
-
-            return {
+            const finalResult = {
                 flag: flag,
                 message: formattedMessage,
                 claim: text
             };
+
+            // PANGGIL HISTORY (FIX BUG KRITIS #1)
+            saveFactCheckToHistory(finalResult);
+            
+            return finalResult;
             // --- NEW FORMATTING LOGIC END ---
 
         } else if (data.error) {
@@ -541,36 +557,4 @@ ${linksOutput}
             debug: error.message
         };
     }
-
-// SNIPPET A: Fungsi Penyimpanan History
-
-const HISTORY_KEY = 'veritasHistory';
-const MAX_HISTORY_ITEMS = 20; // Batasi maksimal 20 item
-
-async function saveFactCheckToHistory(result) {
-    if (!result || result.flag === 'Error') return;
-
-    // Tambahkan timestamp
-    const historyItem = {
-        ...result,
-        timestamp: Date.now()
-    };
-
-    // 1. Ambil history yang sudah ada
-    const storage = await chrome.storage.local.get([HISTORY_KEY]);
-    const history = storage[HISTORY_KEY] || [];
-
-    // 2. Tambahkan item baru ke awal array
-    history.unshift(historyItem);
-
-    // 3. Batasi ukuran array
-    if (history.length > MAX_HISTORY_ITEMS) {
-        history.splice(MAX_HISTORY_ITEMS);
-    }
-
-    // 4. Simpan kembali ke storage
-    chrome.storage.local.set({ [HISTORY_KEY]: history });
-    console.log("[Veritas History] Hasil Fact Check berhasil disimpan.");
-}
-
 }
