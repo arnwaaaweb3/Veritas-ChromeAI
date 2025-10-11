@@ -97,11 +97,10 @@
     .topLogo:hover { transform: scale(1.08); }
     
     .topText {
-        height: 75px;
-        opacity: 0.9;
-        flex-shrink: 0; 
+      height: 75px;
+      opacity: 0.9;
+      flex-shrink: 0;
     }
-
 
     /* === MAIN CONTENT (SCROLLABLE AREA) === */
     #mainContent {
@@ -344,7 +343,7 @@
     }
     .history-flag.Hijau { background: var(--secondary); color: white; }
     .history-flag.Merah { background: var(--danger); color: white; }
-    .history-flag.Kuning { background: var(--warning); color: #555; }
+    .history-flag.Kuning { background: var(--warning); color: white; }
 
     #tabNav button {
       border: none;
@@ -383,7 +382,17 @@
             <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="topLogo">
         </div>
 
-        <div id="tabNav" style="display: flex; justify-content: space-around; margin-top: 55px; margin-bottom: 10px; flex-shrink: 0; background: #fff; padding: 5px 0; border-radius: var(--radius);">
+        <div id="tabNav" 
+          style="display: flex; 
+          justify-content: space-around; 
+          margin-top: 55px; 
+          margin-bottom: 10px; 
+          flex-shrink: 0; 
+          background: #fff; 
+          padding: 5px 0; 
+          border-radius: var(--radius);">
+          <button id="tabFactCheck">Fact Check</button>
+          <button id="tabHistory">History</button>
         </div>
 
         <div id="tabContent">
@@ -413,15 +422,13 @@
             </div>
             
             <div id="historyTab" style="display: none; padding-top: 10px;">
-              <button id="clearHistoryButton" style="width: 100%; background: var(--danger); margin-bottom: 15px;">Hapus Semua Riwayat</button>
+              <button id="clearHistoryButton" style="width: 100%; background: var(--danger); margin-bottom: 15px; border: none; color: white; padding: 10px; border-radius: var(--radius); cursor: pointer; font-weight: 600;">Hapus Semua Riwayat</button>
               <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
               <div id="historyList">
               </div>
             </div>
         </div>
-
     </div>
-
   </div>
   <script src="popup.js"></script>
 </body>
