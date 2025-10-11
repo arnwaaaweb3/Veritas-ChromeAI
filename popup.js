@@ -392,6 +392,13 @@ function setupUploadListener() {
       
       renderLoadingState(document.getElementById('resultOutput'), textClaim);
 
+      // V: SISIPKAN BARIS INI UNTUK PERSISTENSI LOADING STATE 
+      chrome.storage.local.set({ 'lastFactCheckResult': 
+        { flag: 'loading', 
+          claim: textClaim, 
+          message: 'Veritas sedang memverifikasi klaim ini...' } 
+      });
+
     } catch (error) {
       uploadStatus.textContent = `❌ Gagal: ${error.message}`;
       uploadStatus.style.color = 'red';
