@@ -1,7 +1,7 @@
-// popup.js (FINAL & STABIL: Structured Reasoning Rendering + History Fixes + UX Patch 1 & 2 + i18n)
+// popup.js (FINAL & STABIL: Structured Reasoning Rendering + History Fixes + UX Patch 1 & 2)
 document.addEventListener('DOMContentLoaded', initializePopup);
 
-const HISTORY_KEY = 'veritasHistory'; 
+const HISTORY_KEY = 'veritasHistory'; // Deklarasi HISTORY_KEY
 
 // Utility untuk memisahkan hasil Markdown (sesuai format baru di background.js)
 function parseAndRenderResult(result, claimText, resultOutputDiv) {
@@ -43,8 +43,8 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     claimDiv.textContent = claimMatch ? claimMatch[1] : claimText;
     
     // 2. Render Reasonings (Mengubah Markdown List ke HTML List)
-    let reasonsHTML = `<p>Reason:</p><ul>`;
-    const reasonLines = rawReasonings.split('\n').filter(line => line.startsWith('-')); // V: Batasan 3 poin dihapus
+    let reasonsHTML = '<p>Reason:</p><ul>';
+    const reasonLines = rawReasonings.split('\n').filter(line => line.startsWith('-'));
     
     if (reasonLines.length > 0) {
         reasonLines.forEach(line => {
@@ -97,11 +97,11 @@ function renderErrorState(flag, message) {
     const reasonDiv = document.getElementById('reasoningBox');
     const linkDiv = document.getElementById('linkBox');
     
-    // V: Menggunakan i18n
+    // Tampilkan pesan error di div reasoning agar terlihat
     headerDiv.className = 'Error';
-    headerDiv.innerHTML = `<span class="flag-symbol">❌</span> <span>${chrome.i18n.getMessage('veritasErrorTitle')}</span>`;
-    claimDiv.textContent = chrome.i18n.getMessage('veritasErrorClaim');
-    reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">${chrome.i18n.getMessage('veritasErrorDetail')}</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`;
+    headerDiv.innerHTML = `<span class="flag-symbol">❌</span> <span>Error Processing</span>`;
+    claimDiv.textContent = 'Pengecekan gagal total.';
+    reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Detail Error:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`;
     linkDiv.innerHTML = '';
 }
 
@@ -118,9 +118,7 @@ function renderLoadingState(resultBox, claim) {
 
     outputDiv.style.display = 'none';
     loadingDiv.style.display = 'flex';
-    // V: Menggunakan i18n
-    const loadingMessage = chrome.i18n.getMessage('loadingData');
-    claimText.textContent = `"${claim || loadingMessage}"`;
+    claimText.textContent = `"${claim || 'Memuat data klaim...'}"`;
 }
 
 
@@ -167,12 +165,10 @@ function getFactCheckResult() {
     // Default state jika tidak ada hasil
     document.getElementById('loadingState').style.display = 'none';
     resultOutputDiv.style.display = 'block';
-    
-    // V: Menggunakan i18n untuk Default State
     document.getElementById('resultHeader').className = 'Kuning';
-    document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol">💡</span> <span>${chrome.i18n.getMessage('readyHeader')}</span>`;
-    document.getElementById('claimDisplay').textContent = chrome.i18n.getMessage('readyClaim');
-    document.getElementById('reasoningBox').innerHTML = `<p>${chrome.i18n.getMessage('readyInstruction1')}</p><ul><li>${chrome.i18n.getMessage('readyInstruction2')}</li><li>${chrome.i18n.getMessage('readyInstruction3')}</li></ul>`;
+    document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol">💡</span> <span>Ready for Action</span>`;
+    document.getElementById('claimDisplay').textContent = 'Siap untuk Cek Fakta Baru.';
+    document.getElementById('reasoningBox').innerHTML = `<p>Instruksi:</p><ul><li>Sorot teks & klik kanan (Cek Fakta Teks/Gambar).</li><li>Atau, gunakan fitur upload di bawah.</li></ul>`;
     document.getElementById('linkBox').innerHTML = '';
     
   });
@@ -213,16 +209,14 @@ async function renderHistory() {
     const status = document.getElementById('historyStatus');
 
     historyList.innerHTML = '';
-    // V: Menggunakan i18n
-    status.textContent = chrome.i18n.getMessage('loadingHistory');
+    status.textContent = 'Memuat riwayat...';
     status.style.display = 'block';
 
     const storage = await chrome.storage.local.get([HISTORY_KEY]);
     const history = storage[HISTORY_KEY] || [];
 
     if (history.length === 0) {
-        // V: Menggunakan i18n
-        status.textContent = chrome.i18n.getMessage('noHistory');
+        status.textContent = 'Belum ada riwayat pengecekan fakta.';
         return;
     }
 
@@ -261,8 +255,7 @@ async function renderHistory() {
 
 // SNIPPET 4C: Fungsi clearHistory di popup.js
 async function clearHistory() {
-    // V: Menggunakan i18n
-    if (confirm(chrome.i18n.getMessage('confirmClearHistory'))) {
+    if (confirm("Apakah Anda yakin ingin menghapus SEMUA riwayat pengecekan fakta? Aksi ini tidak dapat dibatalkan.")) {
         
         // Hapus array History dari local storage
         chrome.storage.local.remove(HISTORY_KEY, () => {
@@ -271,8 +264,7 @@ async function clearHistory() {
             
             // Beri notifikasi ke user
             const status = document.getElementById('historyStatus');
-            // V: Menggunakan i18n
-            status.textContent = chrome.i18n.getMessage('clearHistorySuccess');
+            status.textContent = '✅ Semua riwayat berhasil dihapus!';
             status.style.display = 'block';
         });
     }
@@ -357,51 +349,13 @@ function initializePopup() {
     switchTab('factCheck'); // Set default tab
   });
 
-  // Language Switch
-    const dropdown = document.getElementById('settingsDropdown');
-    const logoTrigger = document.getElementById('logoClickable');
-    const langID = document.getElementById('langID');
-    const langEN = document.getElementById('langEN');
-
-    // 1. Toggle Dropdown Menu
-    logoTrigger.addEventListener('click', (e) => {
-        e.stopPropagation(); // Stop propagation agar tidak menutup jika mengklik dropdown
-        dropdown.classList.toggle('visible');
-    });
-
-    // Tutup dropdown jika mengklik di luar
-    document.addEventListener('click', (e) => {
-        if (!dropdown.contains(e.target) && dropdown.classList.contains('visible')) {
-            dropdown.classList.remove('visible');
-        }
-    });
-
-    // 2. Language Switch Logic
-    langID.addEventListener('click', () => {
-        chrome.storage.local.set({ 'userLocale': 'id' }, () => {
-            window.location.reload(); // Force reload untuk memuat bahasa baru
-        });
-    });
-
-    langEN.addEventListener('click', () => {
-        chrome.storage.local.set({ 'userLocale': 'en' }, () => {
-            window.location.reload(); // Force reload untuk memuat bahasa baru
-        });
-    });
-
-    // 3. Logic: Tentukan locale mana yang harus di-highlight sebagai active
-    chrome.storage.local.get(['userLocale'], (result) => {
-        const currentLocale = result.userLocale || chrome.i18n.getUILanguage().substring(0, 2);
-        document.getElementById(`lang${currentLocale.toUpperCase()}`).style.background = '#1800ad'; // Highlight active
-    });
-
   // SNIPPET 4B: Listener di popup.js
   document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 
 }
 
 
-// --- UPLOAD HANDLER (i18n) ---
+// --- UPLOAD HANDLER (Tidak Berubah Signifikan) ---
 
 function setupUploadListener() {
   const fileInput = document.getElementById('imageFileInput');
@@ -415,16 +369,14 @@ function setupUploadListener() {
     const file = fileInput.files[0];
     const textClaim = textInput.value.trim();
 
-    // V: Menggunakan i18n
     if (!file) {
-      uploadStatus.textContent = chrome.i18n.getMessage('selectFileError');
+      uploadStatus.textContent = '❌ Pilih file gambar dulu.';
       uploadStatus.style.color = 'red';
       return;
     }
 
-    // V: Menggunakan i18n
     if (textClaim.length < 5) {
-      uploadStatus.textContent = chrome.i18n.getMessage('claimLengthError');
+      uploadStatus.textContent = '❌ Klaim teks wajib diisi (minimal 5 karakter).';
       uploadStatus.style.color = 'red';
       return;
     }
@@ -433,16 +385,14 @@ function setupUploadListener() {
     fileInput.disabled = true;
     textInput.disabled = true;
 
-    // V: Menggunakan i18n
-    uploadStatus.textContent = chrome.i18n.getMessage('convertingImage');
+    uploadStatus.textContent = '⏳ Mengonversi gambar...';
     uploadStatus.style.color = 'blue';
 
     try {
       const base64Data = await readFileAsBase64(file);
       const mimeType = file.type;
 
-      // V: Menggunakan i18n
-      uploadStatus.textContent = chrome.i18n.getMessage('sendingToGemini');
+      uploadStatus.textContent = '⏳ Mengirim ke Gemini... (Cek di kolom hasil di atas)';
 
       chrome.runtime.sendMessage({
         action: 'multimodalUpload',
@@ -456,12 +406,10 @@ function setupUploadListener() {
         uploadStatus.textContent = ''; 
 
         if (response && response.success) {
-            // V: Menggunakan i18n
-            uploadStatus.textContent = chrome.i18n.getMessage('analysisSuccess');
+            uploadStatus.textContent = '✅ Analisis Selesai!';
             uploadStatus.style.color = 'green';
         } else {
-            // V: Menggunakan i18n
-            uploadStatus.textContent = chrome.i18n.getMessage('analysisFailed');
+            uploadStatus.textContent = '❌ Gagal Analisis (Cek di kolom hasil di atas)';
             uploadStatus.style.color = 'red';
         }
       });
@@ -469,16 +417,14 @@ function setupUploadListener() {
       renderLoadingState(document.getElementById('resultOutput'), textClaim);
 
       // SISIPKAN BARIS INI UNTUK PERSISTENSI LOADING STATE 
-      // V: Menggunakan i18n
       chrome.storage.local.set({ 'lastFactCheckResult': 
         { flag: 'loading', 
           claim: textClaim, 
-          message: chrome.i18n.getMessage('veritasLoadingMessage') } 
+          message: 'Veritas sedang memverifikasi klaim ini...' } 
       });
 
     } catch (error) {
-      // V: Menggunakan i18n
-      uploadStatus.textContent = `${chrome.i18n.getMessage('generalFailed')} ${error.message}`;
+      uploadStatus.textContent = `❌ Gagal: ${error.message}`;
       uploadStatus.style.color = 'red';
       submitButton.disabled = false;
       fileInput.disabled = false;
