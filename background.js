@@ -89,19 +89,28 @@ function sendResultToPopup(result, isContextual = false) {
     });
 }
 
-// FUNGSI BARU: Mengirim Notifikasi Chrome (PATCH: Interactive Error)
+/// Mengirim Notifikasi Chrome)
 function sendFactCheckNotification(claimText, isSuccess) {
-    chrome.notifications.create({
+    const notificationId = 'veritas-fact-check-' + Date.now(); // Beri ID unik
+    
+    chrome.notifications.create(notificationId, { // Pakai ID di sini
         type: 'basic',
         iconUrl: 'icons/veritas48.png', 
         title: isSuccess ? '✅ Fact Check Selesai!' : '❌ Fact Check Gagal',
         message: isSuccess 
-            ? `Klaim: "${claimText}". Klik icon Veritas untuk melihat hasilnya.`
+            ? `Klaim: "${claimText}". Klik notifikasi ini untuk melihat hasilnya.`
             : `Gagal memproses klaim "${claimText}". Silakan coba lagi.`,
-        // V: requireInteraction: true HANYA jika GAGAL (isSuccess = false)
         requireInteraction: !isSuccess 
     });
 }
+
+// V: LISTENER BARU: Notifikasi Clickable
+chrome.notifications.onClicked.addListener((notificationId) => {
+    // Membuka popup extension saat notifikasi diklik
+    chrome.action.openPopup();
+    // Opsional: Hapus notifikasi setelah diklik
+    chrome.notifications.clear(notificationId);
+});
 
 // ====================================================================
 // FUNGSI 2: CONTEXT MENU SETUP
