@@ -357,6 +357,44 @@ function initializePopup() {
     switchTab('factCheck'); // Set default tab
   });
 
+  // Language Switch
+    const dropdown = document.getElementById('settingsDropdown');
+    const logoTrigger = document.getElementById('logoClickable');
+    const langID = document.getElementById('langID');
+    const langEN = document.getElementById('langEN');
+
+    // 1. Toggle Dropdown Menu
+    logoTrigger.addEventListener('click', (e) => {
+        e.stopPropagation(); // Stop propagation agar tidak menutup jika mengklik dropdown
+        dropdown.classList.toggle('visible');
+    });
+
+    // Tutup dropdown jika mengklik di luar
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target) && dropdown.classList.contains('visible')) {
+            dropdown.classList.remove('visible');
+        }
+    });
+
+    // 2. Language Switch Logic
+    langID.addEventListener('click', () => {
+        chrome.storage.local.set({ 'userLocale': 'id' }, () => {
+            window.location.reload(); // Force reload untuk memuat bahasa baru
+        });
+    });
+
+    langEN.addEventListener('click', () => {
+        chrome.storage.local.set({ 'userLocale': 'en' }, () => {
+            window.location.reload(); // Force reload untuk memuat bahasa baru
+        });
+    });
+
+    // 3. Logic: Tentukan locale mana yang harus di-highlight sebagai active
+    chrome.storage.local.get(['userLocale'], (result) => {
+        const currentLocale = result.userLocale || chrome.i18n.getUILanguage().substring(0, 2);
+        document.getElementById(`lang${currentLocale.toUpperCase()}`).style.background = '#1800ad'; // Highlight active
+    });
+
   // SNIPPET 4B: Listener di popup.js
   document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 

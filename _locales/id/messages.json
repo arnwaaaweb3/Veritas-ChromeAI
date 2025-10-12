@@ -97,5 +97,11 @@
     },
     "veritasLoadingMessage": {
         "message": "Veritas sedang memverifikasi klaim ini..."
+    },
+    "themeTitle": {
+        "message": "Tema (Gelap/Terang)"
+    },
+    "languageTitle": {
+        "message": "Bahasa"
     }
 }

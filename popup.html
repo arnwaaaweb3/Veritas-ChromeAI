@@ -102,6 +102,68 @@
       flex-shrink: 0;
     }
 
+    /* === DROPDOWN MENU: LANGUAGE SWITCH & LIGHT/DARK MODE === */
+    #settingsTrigger {
+        position: fixed; 
+        top: 16px;
+        right: 16px;
+        z-index: 30; 
+        cursor: pointer;
+        width: 44px; /* Set lebar agar bisa diklik */
+        height: 44px; /* Set tinggi agar bisa diklik */
+        transition: transform 0.2s ease;
+    }
+
+    #settingsTrigger:hover { transform: scale(1.08); }
+
+    /* Container Dropdown */
+    #settingsDropdown {
+        position: absolute;
+        top: 55px; /* Tepat di bawah logo */
+        right: 0;
+        width: 180px;
+        background: #ffffff; 
+        border: 1px solid #0046ff; /* Main Brand Color */
+        border-radius: var(--radius);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        padding: 10px;
+        display: none; /* Default hidden */
+        z-index: 40;
+    }
+
+    #settingsDropdown.visible {
+        display: block;
+    }
+
+    .settings-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+        color: #1800ad; /* Secondary Brand Color */
+    }
+
+    .settings-item:last-child {
+        border-bottom: none;
+    }
+
+    .language-button {
+        background: #0046ff;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background 0.2s;
+    }
+
+    .language-button:hover {
+        background: #1800ad;
+    }
+
     /* === MAIN CONTENT (SCROLLABLE AREA) === */
     #mainContent {
       position: absolute;
@@ -377,10 +439,30 @@
     </div>
 
     <div id="mainContent">
-        <div id="topHeader"> 
-            <img src="icons/Veritas-Text.svg" alt="Veritas Text" class="topText">
-            <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="topLogo">
+      <div id="settingsTrigger">
+        <div id="topHeader">
+          <img src="icons/Veritas-Text.svg" alt="Veritas Text" class="topText">
+          <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="topLogo" id="logoClickable">
         </div>
+
+        <div id="settingsDropdown">
+          <div class="settings-item">
+            <span data-i18n="themeTitle">__MSG_themeTitle__</span>
+            <label class="switch">
+              <input type="checkbox" id="darkModeToggle">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="settings-item">
+            <span data-i18n="languageTitle">__MSG_languageTitle__</span>
+            <button id="langID" class="language-button">ID</button>
+            <button id="langEN" class="language-button">EN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
         <div id="tabNav" 
           style="display: flex; 

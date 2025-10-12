@@ -97,5 +97,11 @@
     },
     "veritasLoadingMessage": {
         "message": "Veritas is verifying this claim..."
+    },
+    "themeTitle": {
+        "message": "Theme (Dark/Light)"
+    },
+    "languageTitle": {
+        "message": "Language"
     }
 }
