@@ -264,7 +264,6 @@ async function clearHistory() {
 }
 // --- HISTORY LOGIC (END) ---
 
-
 // --- INITIALIZATION (FIXED) ---
 
 function initializePopup() {
@@ -277,18 +276,30 @@ function initializePopup() {
 
   chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
 
-  chrome.storage.local.get(['isContextualCheck'], (storage) => {
-    if (storage.isContextualCheck) {
-      chrome.storage.local.remove('isContextualCheck');
+  // V: Ambil 2 flag: isContextualCheck (dari klik kanan) dan hasSeenSplash (dari manual open)
+  chrome.storage.local.get(['isContextualCheck', 'hasSeenSplash'], (storage) => {
+    const isContextualCheck = storage.isContextualCheck;
+    const hasSeenSplash = storage.hasSeenSplash;
+    
+    // Hapus flag contextual check setelah diambil
+    if (isContextualCheck) {
+        chrome.storage.local.remove('isContextualCheck');
+    }
 
+    // Tentukan apakah Splash harus di-bypass (sudah pernah dilihat ATAU dibuka dari Contextual Check)
+    const shouldBypassSplash = isContextualCheck || hasSeenSplash;
+
+    if (shouldBypassSplash) {
       if (video) video.pause();
       if (splash) splash.style.display = 'none';
       if (main) main.classList.add('visible');
 
       getFactCheckResult();
       setupUploadListener();
-      // Tab initialization moved outside
     } else {
+      // V: Ini adalah run pertama kali secara manual. Set flag agar tidak muncul lagi
+      chrome.storage.local.set({ 'hasSeenSplash': true }); 
+        
       if (video) {
         video.pause();
         video.currentTime = 0;
@@ -302,7 +313,6 @@ function initializePopup() {
           if (main) main.classList.add('visible');
           getFactCheckResult();
           setupUploadListener();
-          // Tab initialization moved outside
         }, fadeOutTime);
       }, splashDuration);
 
@@ -315,7 +325,6 @@ function initializePopup() {
               main.classList.add('visible');
               getFactCheckResult();
               setupUploadListener();
-              // Tab initialization moved outside
             }, fadeOutTime);
           }
         });
@@ -332,7 +341,6 @@ function initializePopup() {
   document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 
 }
-
 
 // --- UPLOAD HANDLER (Tidak Berubah Signifikan) ---
 
