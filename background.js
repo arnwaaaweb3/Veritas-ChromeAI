@@ -1,4 +1,4 @@
-// background.js (PATCH FINAL V5: Structured Reasoning + History Logic)
+// background.js (PATCH FINAL V6: Robustness, Security, Notifications & Retry)
 
 // --- LOCAL AI HELPER FUNCTIONS (START) ---
 function isLocalAiAvailable() {
@@ -13,7 +13,9 @@ async function runLocalPreProcessing(claimText) {
 
     try {
         console.log("[Veritas LocalAI] Mulai pre-processing lokal menggunakan Prompt API.");
-        const localPrompt = `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi. Fokus pada fakta inti: "${claimText}"`;
+        const localPrompt = 
+        `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi. 
+        Fokus pada fakta inti: "${claimText}"`;
         
         const response = await chrome.ai.generateContent({
             model: 'text_model', 
@@ -75,7 +77,7 @@ function sendResultToPopup(result, isContextual = false) {
     });
 }
 
-// FUNGSI BARU: Mengirim Notifikasi Chrome
+// FUNGSI BARU: Mengirim Notifikasi Chrome (PATCH: Interactive Error)
 function sendFactCheckNotification(claimText, isSuccess) {
     chrome.notifications.create({
         type: 'basic',
@@ -84,7 +86,8 @@ function sendFactCheckNotification(claimText, isSuccess) {
         message: isSuccess 
             ? `Klaim: "${claimText}". Klik icon Veritas untuk melihat hasilnya.`
             : `Gagal memproses klaim "${claimText}". Silakan coba lagi.`,
-        requireInteraction: false 
+        // V: requireInteraction: true HANYA jika GAGAL (isSuccess = false)
+        requireInteraction: !isSuccess 
     });
 }
 
@@ -110,7 +113,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // ====================================================================
-// FUNGSI 3: LISTENER UTAMA CONTEXT MENU (Klik Kanan)
+// FUNGSI 3: LISTENER UTAMA CONTEXT MENU (Klik Kanan) (PATCH: Retry Logic)
 // ====================================================================
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -135,17 +138,23 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             message: "Veritas sedang memverifikasi klaim ini..."
         };
 
-        // Inject content script (context_result.js) dan kirim status loading
+        // Inject content script (context_result.js)
         await chrome.scripting.executeScript({
             target: { tabId: currentTabId },
             files: ['context_result.js'] 
         });
         
-        // Kirim update loading ke panel yang baru di-inject
-        chrome.tabs.sendMessage(currentTabId, { 
-            action: 'finalResultUpdate', 
-            resultData: loadingResult 
-        });
+        // V: Kirim update loading ke panel yang baru di-inject DENGAN RETRY (Fix Race Condition)
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                await chrome.tabs.sendMessage(currentTabId, { action: 'finalResultUpdate', resultData: loadingResult });
+                console.log(`[Veritas Context] Loading state sent after ${attempt + 1} attempt(s).`);
+                break;
+            } catch (e) {
+                console.warn(`[Veritas Context] Gagal kirim pesan (attempt ${attempt + 1}). Mencoba lagi...`, e);
+                await new Promise(res => setTimeout(res, 200)); // Tunggu 200ms
+            }
+        }
 
         // Simpan juga loading state ke storage (untuk popup jika dibuka)
         chrome.storage.local.set({
@@ -216,8 +225,7 @@ chrome.runtime.onMessage.addListener(
 );
 
 // ====================================================================
-// FUNGSI 5: RUN FACT CHECK HYBRID (TEKS ONLY) 
-// PATCH FINAL: Integrasi Lokal AI Merged & Custom Formatting
+// FUNGSI 5: RUN FACT CHECK HYBRID (TEKS ONLY) (PATCH: Robust Parsing)
 // ====================================================================
 
 async function runFactCheckHybrid(text) {
@@ -230,7 +238,11 @@ async function runFactCheckHybrid(text) {
             if (isLocalAiAvailable()) {
                 console.log("[Veritas Hybrid] API Key hilang. Melakukan verifikasi menggunakan AI Lokal (On-Device).");
 
-                const localPrompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${text}", berdasarkan pengetahuan internal Anda. Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'. Diikuti dengan alasan singkat dan jelas.`;
+                const localPrompt = 
+                `Anda adalah Veritas AI, spesialis cek fakta. 
+                VERIFIKASI klaim ini: "${text}", berdasarkan pengetahuan internal Anda. 
+                Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'.
+                Diikuti dengan alasan singkat dan jelas.`;
 
                 const localResult = await chrome.ai.generateContent({
                     model: 'gemini-flash', 
@@ -267,7 +279,15 @@ async function runFactCheckHybrid(text) {
         
         const processedText = await runLocalPreProcessing(text);
         
-        const prompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${processedText}", dengan MENCARI INFORMASI REAL-TIME di Google Search. WAJIB sertakan fakta terbaru dari sumber yang Anda temukan untuk mendukung penilaian Anda. Balas dengan format ini: (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK DI DALAM JAWABAN TEKSMU.`;
+        // Prompt yang sudah dioptimalkan
+        const prompt = 
+        `Anda adalah Veritas AI, spesialis cek fakta. 
+        Tugas Anda adalah VERIFIKASI klaim ini: "${processedText}". 
+        Gunakan Google Search untuk mendapatkan informasi real-time dan WAJIB sertakan fakta terbaru yang mendukung penilaian Anda. 
+        **Terapkan Format Keluaran Ketat ini:** 
+        (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); 
+        (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). 
+        JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
         
         console.log("[Veritas Hybrid] Mengirim prompt ke Gemini Cloud (dengan Google Search)...");
 
@@ -276,11 +296,13 @@ async function runFactCheckHybrid(text) {
             tools: [{ googleSearch: {} }] 
         };
 
+        // API Key ada di Header (Sudah Sesuai)
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
             method: "POST",
-            headers: { 
-                "Content-Type": "application/json", 
-                "x-goog-api-key": geminiApiKey },
+            headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": geminiApiKey 
+            },
             body: JSON.stringify(payload) 
         });
 
@@ -288,7 +310,8 @@ async function runFactCheckHybrid(text) {
         
         // 🚨 PATCH FIX: Memeriksa candidates.length > 0 (menghindari TypeError)
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-            const aiResponse = data.candidates[0].content.parts[0].text.trim();
+            // V: ROBUST PARSING: Gabungkan semua parts text jika ada multi-part
+            const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim(); 
             const firstLine = aiResponse.split('\n')[0].trim();
             
             let flag = "Kuning"; 
@@ -379,13 +402,17 @@ ${linksOutput}
 }
 
 // ====================================================================
-// FUNGSI 6: URL KE BASE64 UTILITY (Untuk Multimodal URL)
+// FUNGSI 6: URL KE BASE64 UTILITY (Untuk Multimodal URL) (PATCH: Dynamic MIME Type)
 // ====================================================================
 
 async function urlToBase64(url) {
     console.log("[Veritas Multimodal] Fetching image dari URL...");
     
     const response = await fetch(url);
+    
+    // V: Dapatkan MIME type dari header respons, fallback ke image/jpeg
+    const mimeType = response.headers.get('content-type') || 'image/jpeg';
+    
     const blob = await response.blob();
 
     return new Promise((resolve, reject) => {
@@ -393,7 +420,11 @@ async function urlToBase64(url) {
         reader.onloadend = () => {
             const base64String = reader.result;
             if (base64String) {
-                resolve(base64String.split(',')[1]); 
+                // V: Resolve dengan object yang menyertakan MIME type dan base64
+                resolve({ 
+                    base64: base64String.split(',')[1], 
+                    mimeType: mimeType 
+                }); 
             } else {
                 reject(new Error("Gagal konversi ke Base64."));
             }
@@ -404,7 +435,7 @@ async function urlToBase64(url) {
 }
 
 // ====================================================================
-// FUNGSI 7: RUN FACT CHECK MULTIMODAL (via URL Klik Kanan)
+// FUNGSI 7: RUN FACT CHECK MULTIMODAL (via URL Klik Kanan) (PATCH: Menggunakan Dynamic MIME Type)
 // ====================================================================
 
 async function runFactCheckMultimodalUrl(imageUrl, text) {
@@ -416,8 +447,8 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             return { flag: "Error", message: "API Key Gemini belum diatur. Multimodal saat ini membutuhkan akses Cloud.", claim: "Multimodal Check Failed" };
         }
         
-        const base64Image = await urlToBase64(imageUrl);
-        const mimeType = 'image/jpeg'; 
+        // V: Destrukturisasi untuk mendapatkan base64 dan mimeType dari fungsi baru
+        const { base64: base64Image, mimeType } = await urlToBase64(imageUrl);
 
         return runFactCheckMultimodalDirect(base64Image, mimeType, text);
 
@@ -433,8 +464,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 
 
 // ====================================================================
-// FUNGSI 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 dari Upload/Fungsi Lain)
-// PATCH FINAL: Multimodal Logic + History Save Fix
+// FUNGSI 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 dari Upload/Fungsi Lain) (PATCH: Robust Parsing)
 // ====================================================================
 
 async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
@@ -446,9 +476,18 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
             return { flag: "Error", message: "API Key Gemini belum diatur.", claim: "Multimodal Check Failed" };
         }
         
-        const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan klaim ini: "${text}", dengan gambar yang diberikan. Cari konteks eksternal di Google untuk memverifikasi klaim. Balas dengan format ini: (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK DI DALAM JAWABAN TEKSMU.`;
+        // Prompt yang sudah dioptimalkan
+        const promptText = 
+        `Anda adalah Veritas AI, spesialis cek fakta multimodal. 
+        Bandingkan dan VERIFIKASI klaim ini: "${text}", dengan (1) gambar yang diberikan dan (2) konteks eksternal dari Google Search. 
+        WAJIB sertakan temuan yang mendukung. 
+        **Terapkan Format Keluaran Ketat ini:** 
+        (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); 
+        (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-).
+        JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
 
-        console.log("[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
+        console.log(
+            "[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
 
         const payload = {
             contents: [
@@ -466,6 +505,7 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
             tools: [{ googleSearch: {} }] 
         };
 
+        // API Key ada di Header (Sudah Sesuai)
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
             method: "POST",
             headers: {
@@ -478,7 +518,8 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
         const data = await response.json();
 
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-            const aiResponse = data.candidates[0].content.parts[0].text.trim();
+            // V: ROBUST PARSING: Gabungkan semua parts text jika ada multi-part
+            const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim(); 
             const firstLine = aiResponse.split('\n')[0].trim();
             
             let flag = "Kuning";
