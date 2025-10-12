@@ -1,4 +1,4 @@
-// background.js (PATCH FINAL V6: Robustness, Security, Notifications & Retry)
+// background.js (PATCH FINAL V7: Code Health Unification)
 
 // --- LOCAL AI HELPER FUNCTIONS (START) ---
 function isLocalAiAvailable() {
@@ -13,9 +13,7 @@ async function runLocalPreProcessing(claimText) {
 
     try {
         console.log("[Veritas LocalAI] Mulai pre-processing lokal menggunakan Prompt API.");
-        const localPrompt = 
-        `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi. 
-        Fokus pada fakta inti: "${claimText}"`;
+        const localPrompt = `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi. Fokus pada fakta inti: "${claimText}"`;
         
         const response = await chrome.ai.generateContent({
             model: 'text_model', 
@@ -225,78 +223,29 @@ chrome.runtime.onMessage.addListener(
 );
 
 // ====================================================================
-// FUNGSI 5: RUN FACT CHECK HYBRID (TEKS ONLY) (PATCH: Robust Parsing)
+// FUNGSI INTI: PANGGILAN API GEMINI (Cloud API Core Handler)
+// V: UNIFIKASI LOGIC (Dulu duplikasi di FUNGSI 5 dan FUNGSI 8)
 // ====================================================================
 
-async function runFactCheckHybrid(text) {
-    try {
-        const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-        const geminiApiKey = resultStorage.geminiApiKey;
-        
-        // --- 1. HANDLE NO API KEY / FALLBACK KE LOCAL AI ---
-        if (!geminiApiKey) {
-            if (isLocalAiAvailable()) {
-                console.log("[Veritas Hybrid] API Key hilang. Melakukan verifikasi menggunakan AI Lokal (On-Device).");
+async function executeGeminiCall(claim, contents) {
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    const geminiApiKey = resultStorage.geminiApiKey;
 
-                const localPrompt = 
-                `Anda adalah Veritas AI, spesialis cek fakta. 
-                VERIFIKASI klaim ini: "${text}", berdasarkan pengetahuan internal Anda. 
-                Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'.
-                Diikuti dengan alasan singkat dan jelas.`;
-
-                const localResult = await chrome.ai.generateContent({
-                    model: 'gemini-flash', 
-                    prompt: localPrompt,
-                    config: { maxOutputTokens: 256 }
-                });
-
-                const aiResponse = localResult.text.trim();
-                const upperResponse = aiResponse.toUpperCase();
-                let flag = "Kuning";
-                if (upperResponse.startsWith("FAKTA")) { flag = "Hijau"; } 
-                else if (upperResponse.startsWith("MISINFORMASI")) { flag = "Merah"; }
-
-                const finalResult = {
-                    flag: flag,
-                    message: aiResponse + " [VERIFIKASI INI HANYA BERDASARKAN PENGETAHUAN LOKAL/INTERNAL CHROME. Mohon masukkan API Key untuk verifikasi Real-Time (Grounding).]",
-                    claim: text
-                };
-                
-                // PANGGIL HISTORY
-                saveFactCheckToHistory(finalResult);
-                
-                return finalResult;
-            }
-
-            return { 
-                flag: "Error", 
-                message: "API Key Gemini belum diatur. Buka Pengaturan Veritas (klik kanan ikon ekstensi > Options) dan simpan API Key kamu. (Gagal menggunakan AI Lokal/Cloud)",
-                debug: "Missing API Key & Local AI Unavailable"
-            };
-        }
-        
-        // --- 2. JIKA API KEY ADA: Gunakan pipeline Local Pre-processing + Cloud Fact Check ---
-        
-        const processedText = await runLocalPreProcessing(text);
-        
-        // Prompt yang sudah dioptimalkan
-        const prompt = 
-        `Anda adalah Veritas AI, spesialis cek fakta. 
-        Tugas Anda adalah VERIFIKASI klaim ini: "${processedText}". 
-        Gunakan Google Search untuk mendapatkan informasi real-time dan WAJIB sertakan fakta terbaru yang mendukung penilaian Anda. 
-        **Terapkan Format Keluaran Ketat ini:** 
-        (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); 
-        (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). 
-        JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
-        
-        console.log("[Veritas Hybrid] Mengirim prompt ke Gemini Cloud (dengan Google Search)...");
-
-        const payload = {
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            tools: [{ googleSearch: {} }] 
+    if (!geminiApiKey) {
+        return { 
+            flag: "Error", 
+            message: "API Key Gemini belum diatur. Akses Cloud diblokir.",
+            debug: "Missing API Key"
         };
+    }
+    
+    // V: Payload sudah menyertakan tools: googleSearch
+    const payload = {
+        contents: contents,
+        tools: [{ googleSearch: {} }] 
+    };
 
-        // API Key ada di Header (Sudah Sesuai)
+    try {
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
             method: "POST",
             headers: {
@@ -308,9 +257,9 @@ async function runFactCheckHybrid(text) {
 
         const data = await response.json();
         
-        // 🚨 PATCH FIX: Memeriksa candidates.length > 0 (menghindari TypeError)
+        // V: Parsing & Error Handling yang Robust
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-            // V: ROBUST PARSING: Gabungkan semua parts text jika ada multi-part
+            // ROBUST PARSING: Gabungkan semua parts text jika ada multi-part
             const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim(); 
             const firstLine = aiResponse.split('\n')[0].trim();
             
@@ -352,7 +301,7 @@ async function runFactCheckHybrid(text) {
 
             const formattedMessage = `
 ${flagSymbol} 
-**"${text}"**
+**"${claim}"**
 Reason:
 ${rawReasoning}
 ${linksOutput}
@@ -361,12 +310,10 @@ ${linksOutput}
             const finalResult = {
                 flag: flag,
                 message: formattedMessage,
-                claim: text
+                claim: claim
             };
             
-            // PANGGIL HISTORY
-            saveFactCheckToHistory(finalResult);
-
+            saveFactCheckToHistory(finalResult); // PANGGIL HISTORY
             return finalResult;
             // --- NEW FORMATTING LOGIC END ---
 
@@ -392,7 +339,7 @@ ${linksOutput}
         }
 
     } catch (error) {
-        console.error("[Veritas Hybrid] Kesalahan Fatal Fetch:", error);
+        console.error("[Veritas Cloud Call] Kesalahan Fatal Fetch:", error);
         return {
             flag: "Error",
             message: `Kesalahan Jaringan/Fatal: ${error.message}`,
@@ -401,8 +348,68 @@ ${linksOutput}
     }
 }
 
+
 // ====================================================================
-// FUNGSI 6: URL KE BASE64 UTILITY (Untuk Multimodal URL) (PATCH: Dynamic MIME Type)
+// FUNGSI 5: RUN FACT CHECK HYBRID (TEKS ONLY) 
+// V: SUDAH DIREFACTOR MENJADI PANGGILAN executeGeminiCall
+// ====================================================================
+
+async function runFactCheckHybrid(text) {
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    const geminiApiKey = resultStorage.geminiApiKey;
+    
+    // --- 1. HANDLE NO API KEY / FALLBACK KE LOCAL AI (Logic Unik) ---
+    if (!geminiApiKey) {
+        if (isLocalAiAvailable()) {
+            console.log("[Veritas Hybrid] API Key hilang. Melakukan verifikasi menggunakan AI Lokal (On-Device).");
+
+            const localPrompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${text}", berdasarkan pengetahuan internal Anda. Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'. Diikuti dengan alasan singkat dan jelas.`;
+
+            const localResult = await chrome.ai.generateContent({
+                model: 'gemini-flash', 
+                prompt: localPrompt,
+                config: { maxOutputTokens: 256 }
+            });
+
+            const aiResponse = localResult.text.trim();
+            const upperResponse = aiResponse.toUpperCase();
+            let flag = "Kuning";
+            if (upperResponse.startsWith("FAKTA")) { flag = "Hijau"; } 
+            else if (upperResponse.startsWith("MISINFORMASI")) { flag = "Merah"; }
+
+            const finalResult = {
+                flag: flag,
+                message: aiResponse + " [VERIFIKASI INI HANYA BERDASARKAN PENGETAHUAN LOKAL/INTERNAL CHROME. Mohon masukkan API Key untuk verifikasi Real-Time (Grounding).]",
+                claim: text
+            };
+            
+            saveFactCheckToHistory(finalResult);
+            return finalResult;
+        }
+
+        return { 
+            flag: "Error", 
+            message: "API Key Gemini belum diatur. Buka Pengaturan Veritas (klik kanan ikon ekstensi > Options) dan simpan API Key kamu. (Gagal menggunakan AI Lokal/Cloud)",
+            debug: "Missing API Key & Local AI Unavailable"
+        };
+    }
+    
+    // --- 2. JIKA API KEY ADA: Gunakan pipeline Local Pre-processing + executeGeminiCall ---
+    
+    const processedText = await runLocalPreProcessing(text);
+    
+    // Prompt yang sudah dioptimalkan
+    const prompt = `Anda adalah Veritas AI, spesialis cek fakta. Tugas Anda adalah VERIFIKASI klaim ini: "${processedText}". Gunakan Google Search untuk mendapatkan informasi real-time dan WAJIB sertakan fakta terbaru yang mendukung penilaian Anda. **Terapkan Format Keluaran Ketat ini:** (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
+    
+    console.log("[Veritas Hybrid] Mengirim prompt ke Gemini Cloud (dengan Google Search)...");
+    
+    const contents = [{ role: "user", parts: [{ text: prompt }] }];
+
+    return executeGeminiCall(text, contents);
+}
+
+// ====================================================================
+// FUNGSI 6: URL KE BASE64 UTILITY (Untuk Multimodal URL)
 // ====================================================================
 
 async function urlToBase64(url) {
@@ -435,7 +442,7 @@ async function urlToBase64(url) {
 }
 
 // ====================================================================
-// FUNGSI 7: RUN FACT CHECK MULTIMODAL (via URL Klik Kanan) (PATCH: Menggunakan Dynamic MIME Type)
+// FUNGSI 7: RUN FACT CHECK MULTIMODAL (via URL Klik Kanan)
 // ====================================================================
 
 async function runFactCheckMultimodalUrl(imageUrl, text) {
@@ -464,139 +471,35 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 
 
 // ====================================================================
-// FUNGSI 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 dari Upload/Fungsi Lain) (PATCH: Robust Parsing)
+// FUNGSI 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 dari Upload/Fungsi Lain)
+// V: SUDAH DIREFACTOR MENJADI PANGGILAN executeGeminiCall
 // ====================================================================
 
 async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
-    try {
-        const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-        const geminiApiKey = resultStorage.geminiApiKey;
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    const geminiApiKey = resultStorage.geminiApiKey;
 
-        if (!geminiApiKey) {
-            return { flag: "Error", message: "API Key Gemini belum diatur.", claim: "Multimodal Check Failed" };
-        }
-        
-        // Prompt yang sudah dioptimalkan
-        const promptText = 
-        `Anda adalah Veritas AI, spesialis cek fakta multimodal. 
-        Bandingkan dan VERIFIKASI klaim ini: "${text}", dengan (1) gambar yang diberikan dan (2) konteks eksternal dari Google Search. 
-        WAJIB sertakan temuan yang mendukung. 
-        **Terapkan Format Keluaran Ketat ini:** 
-        (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); 
-        (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-).
-        JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
-
-        console.log(
-            "[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
-
-        const payload = {
-            contents: [
-                {
-                    role: "user",
-                    parts: [
-                        { text: promptText },
-                        { inlineData: { 
-                            mimeType: mimeType, 
-                            data: base64Image
-                        }}
-                    ]
-                }
-            ],
-            tools: [{ googleSearch: {} }] 
-        };
-
-        // API Key ada di Header (Sudah Sesuai)
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": geminiApiKey 
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-
-        if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-            // V: ROBUST PARSING: Gabungkan semua parts text jika ada multi-part
-            const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim(); 
-            const firstLine = aiResponse.split('\n')[0].trim();
-            
-            let flag = "Kuning";
-            let flagSymbol = "🟡 ALERT!";
-            
-            if (firstLine.toUpperCase().startsWith("FAKTA")) {
-                flag = "Hijau";
-                flagSymbol = "🟢 FACT!";
-            } else if (firstLine.toUpperCase().startsWith("MISINFORMASI")) {
-                flag = "Merah";
-                flagSymbol = "🔴 FALSE!";
-            }
-            
-            // --- NEW FORMATTING LOGIC START ---
-            
-            const parts = aiResponse.split('=');
-            const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : aiResponse.trim();
-            
-            const groundingMetadata = data.candidates[0].groundingMetadata;
-            let linksOutput = "\nLink:\n- (Tidak ada sumber eksternal yang terdeteksi)";
-            
-            if (groundingMetadata && groundingMetadata.groundingChunks) {
-                const uniqueLinks = new Map();
-                groundingMetadata.groundingChunks
-                    .filter(chunk => chunk.web && chunk.web.uri)
-                    .forEach(chunk => {
-                        const title = chunk.web.title || chunk.web.uri.split('/')[2];
-                        uniqueLinks.set(chunk.web.uri, title);
-                    });
-                
-                if (uniqueLinks.size > 0) {
-                     linksOutput = "\nLink:";
-                     uniqueLinks.forEach((title, uri) => {
-                         linksOutput += `\n- [${title}](${uri})`;
-                     });
-                }
-            }
-
-            const formattedMessage = `
-${flagSymbol} 
-**"${text}"**
-Reason:
-${rawReasoning}
-${linksOutput}
-            `.trim();
-            
-            const finalResult = {
-                flag: flag,
-                message: formattedMessage,
-                claim: text
-            };
-
-            // PANGGIL HISTORY (FIX BUG KRITIS #1)
-            saveFactCheckToHistory(finalResult);
-            
-            return finalResult;
-            // --- NEW FORMATTING LOGIC END ---
-
-        } else if (data.error) {
-            return { flag: "Error", message: `API Error: ${data.error.message}`, debug: JSON.stringify(data.error) };
-        } else {
-            let detailedError = "Gagal memproses AI. Respons tidak terduga (Kemungkinan API Key bermasalah atau klaim diblokir).";
-            if (data.promptFeedback && data.promptFeedback.blockReason) {
-                detailedError = `Klaim diblokir oleh Safety Filter: ${data.promptFeedback.blockReason}`;
-            } else if (data.candidates && data.candidates.length === 0) {
-                detailedError = "Respons AI kosong. Kemungkinan masalah konfigurasi atau filter keamanan.";
-            }
-
-            return { flag: "Error", message: detailedError, debug: JSON.stringify(data) };
-        }
-
-    } catch (error) {
-        console.error("[Veritas Upload] Kesalahan Fatal API:", error);
-        return {
-            flag: "Error",
-            message: `Kesalahan Jaringan/Fatal: ${error.message}`,
-            debug: error.message
-        };
+    if (!geminiApiKey) {
+        return { flag: "Error", message: "API Key Gemini belum diatur. Akses Cloud diblokir.", claim: "Multimodal Check Failed" };
     }
+    
+    // Prompt yang sudah dioptimalkan
+    const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan dan VERIFIKASI klaim ini: "${text}", dengan (1) gambar yang diberikan dan (2) konteks eksternal dari Google Search. WAJIB sertakan temuan yang mendukung. **Terapkan Format Keluaran Ketat ini:** (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
+
+    console.log("[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
+
+    const contents = [
+        {
+            role: "user",
+            parts: [
+                { text: promptText },
+                { inlineData: { 
+                    mimeType: mimeType, 
+                    data: base64Image
+                }}
+            ]
+        }
+    ];
+
+    return executeGeminiCall(text, contents);
 }
