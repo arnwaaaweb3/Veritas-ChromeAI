@@ -1,7 +1,7 @@
-// popup.js (FINAL & STABIL: Structured Reasoning Rendering + History Fixes + UX Patch 1 & 2)
+// popup.js (FINAL & STABIL: Structured Reasoning Rendering + History Fixes + UX Patch 1 & 2 + i18n)
 document.addEventListener('DOMContentLoaded', initializePopup);
 
-const HISTORY_KEY = 'veritasHistory'; // Deklarasi HISTORY_KEY
+const HISTORY_KEY = 'veritasHistory'; 
 
 // Utility untuk memisahkan hasil Markdown (sesuai format baru di background.js)
 function parseAndRenderResult(result, claimText, resultOutputDiv) {
@@ -43,8 +43,8 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     claimDiv.textContent = claimMatch ? claimMatch[1] : claimText;
     
     // 2. Render Reasonings (Mengubah Markdown List ke HTML List)
-    let reasonsHTML = '<p>Reason:</p><ul>';
-    const reasonLines = rawReasonings.split('\n').filter(line => line.startsWith('-'));
+    let reasonsHTML = `<p>Reason:</p><ul>`;
+    const reasonLines = rawReasonings.split('\n').filter(line => line.startsWith('-')); // V: Batasan 3 poin dihapus
     
     if (reasonLines.length > 0) {
         reasonLines.forEach(line => {
@@ -97,11 +97,11 @@ function renderErrorState(flag, message) {
     const reasonDiv = document.getElementById('reasoningBox');
     const linkDiv = document.getElementById('linkBox');
     
-    // Tampilkan pesan error di div reasoning agar terlihat
+    // V: Menggunakan i18n
     headerDiv.className = 'Error';
-    headerDiv.innerHTML = `<span class="flag-symbol">❌</span> <span>Error Processing</span>`;
-    claimDiv.textContent = 'Pengecekan gagal total.';
-    reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Detail Error:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`;
+    headerDiv.innerHTML = `<span class="flag-symbol">❌</span> <span>${chrome.i18n.getMessage('veritasErrorTitle')}</span>`;
+    claimDiv.textContent = chrome.i18n.getMessage('veritasErrorClaim');
+    reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">${chrome.i18n.getMessage('veritasErrorDetail')}</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`;
     linkDiv.innerHTML = '';
 }
 
@@ -118,7 +118,9 @@ function renderLoadingState(resultBox, claim) {
 
     outputDiv.style.display = 'none';
     loadingDiv.style.display = 'flex';
-    claimText.textContent = `"${claim || 'Memuat data klaim...'}"`;
+    // V: Menggunakan i18n
+    const loadingMessage = chrome.i18n.getMessage('loadingData');
+    claimText.textContent = `"${claim || loadingMessage}"`;
 }
 
 
@@ -165,10 +167,12 @@ function getFactCheckResult() {
     // Default state jika tidak ada hasil
     document.getElementById('loadingState').style.display = 'none';
     resultOutputDiv.style.display = 'block';
+    
+    // V: Menggunakan i18n untuk Default State
     document.getElementById('resultHeader').className = 'Kuning';
-    document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol">💡</span> <span>Ready for Action</span>`;
-    document.getElementById('claimDisplay').textContent = 'Siap untuk Cek Fakta Baru.';
-    document.getElementById('reasoningBox').innerHTML = `<p>Instruksi:</p><ul><li>Sorot teks & klik kanan (Cek Fakta Teks/Gambar).</li><li>Atau, gunakan fitur upload di bawah.</li></ul>`;
+    document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol">💡</span> <span>${chrome.i18n.getMessage('readyHeader')}</span>`;
+    document.getElementById('claimDisplay').textContent = chrome.i18n.getMessage('readyClaim');
+    document.getElementById('reasoningBox').innerHTML = `<p>${chrome.i18n.getMessage('readyInstruction1')}</p><ul><li>${chrome.i18n.getMessage('readyInstruction2')}</li><li>${chrome.i18n.getMessage('readyInstruction3')}</li></ul>`;
     document.getElementById('linkBox').innerHTML = '';
     
   });
@@ -209,14 +213,16 @@ async function renderHistory() {
     const status = document.getElementById('historyStatus');
 
     historyList.innerHTML = '';
-    status.textContent = 'Memuat riwayat...';
+    // V: Menggunakan i18n
+    status.textContent = chrome.i18n.getMessage('loadingHistory');
     status.style.display = 'block';
 
     const storage = await chrome.storage.local.get([HISTORY_KEY]);
     const history = storage[HISTORY_KEY] || [];
 
     if (history.length === 0) {
-        status.textContent = 'Belum ada riwayat pengecekan fakta.';
+        // V: Menggunakan i18n
+        status.textContent = chrome.i18n.getMessage('noHistory');
         return;
     }
 
@@ -255,7 +261,8 @@ async function renderHistory() {
 
 // SNIPPET 4C: Fungsi clearHistory di popup.js
 async function clearHistory() {
-    if (confirm("Apakah Anda yakin ingin menghapus SEMUA riwayat pengecekan fakta? Aksi ini tidak dapat dibatalkan.")) {
+    // V: Menggunakan i18n
+    if (confirm(chrome.i18n.getMessage('confirmClearHistory'))) {
         
         // Hapus array History dari local storage
         chrome.storage.local.remove(HISTORY_KEY, () => {
@@ -264,7 +271,8 @@ async function clearHistory() {
             
             // Beri notifikasi ke user
             const status = document.getElementById('historyStatus');
-            status.textContent = '✅ Semua riwayat berhasil dihapus!';
+            // V: Menggunakan i18n
+            status.textContent = chrome.i18n.getMessage('clearHistorySuccess');
             status.style.display = 'block';
         });
     }
@@ -355,7 +363,7 @@ function initializePopup() {
 }
 
 
-// --- UPLOAD HANDLER (Tidak Berubah Signifikan) ---
+// --- UPLOAD HANDLER (i18n) ---
 
 function setupUploadListener() {
   const fileInput = document.getElementById('imageFileInput');
@@ -369,14 +377,16 @@ function setupUploadListener() {
     const file = fileInput.files[0];
     const textClaim = textInput.value.trim();
 
+    // V: Menggunakan i18n
     if (!file) {
-      uploadStatus.textContent = '❌ Pilih file gambar dulu.';
+      uploadStatus.textContent = chrome.i18n.getMessage('selectFileError');
       uploadStatus.style.color = 'red';
       return;
     }
 
+    // V: Menggunakan i18n
     if (textClaim.length < 5) {
-      uploadStatus.textContent = '❌ Klaim teks wajib diisi (minimal 5 karakter).';
+      uploadStatus.textContent = chrome.i18n.getMessage('claimLengthError');
       uploadStatus.style.color = 'red';
       return;
     }
@@ -385,14 +395,16 @@ function setupUploadListener() {
     fileInput.disabled = true;
     textInput.disabled = true;
 
-    uploadStatus.textContent = '⏳ Mengonversi gambar...';
+    // V: Menggunakan i18n
+    uploadStatus.textContent = chrome.i18n.getMessage('convertingImage');
     uploadStatus.style.color = 'blue';
 
     try {
       const base64Data = await readFileAsBase64(file);
       const mimeType = file.type;
 
-      uploadStatus.textContent = '⏳ Mengirim ke Gemini... (Cek di kolom hasil di atas)';
+      // V: Menggunakan i18n
+      uploadStatus.textContent = chrome.i18n.getMessage('sendingToGemini');
 
       chrome.runtime.sendMessage({
         action: 'multimodalUpload',
@@ -406,10 +418,12 @@ function setupUploadListener() {
         uploadStatus.textContent = ''; 
 
         if (response && response.success) {
-            uploadStatus.textContent = '✅ Analisis Selesai!';
+            // V: Menggunakan i18n
+            uploadStatus.textContent = chrome.i18n.getMessage('analysisSuccess');
             uploadStatus.style.color = 'green';
         } else {
-            uploadStatus.textContent = '❌ Gagal Analisis (Cek di kolom hasil di atas)';
+            // V: Menggunakan i18n
+            uploadStatus.textContent = chrome.i18n.getMessage('analysisFailed');
             uploadStatus.style.color = 'red';
         }
       });
@@ -417,14 +431,16 @@ function setupUploadListener() {
       renderLoadingState(document.getElementById('resultOutput'), textClaim);
 
       // SISIPKAN BARIS INI UNTUK PERSISTENSI LOADING STATE 
+      // V: Menggunakan i18n
       chrome.storage.local.set({ 'lastFactCheckResult': 
         { flag: 'loading', 
           claim: textClaim, 
-          message: 'Veritas sedang memverifikasi klaim ini...' } 
+          message: chrome.i18n.getMessage('veritasLoadingMessage') } 
       });
 
     } catch (error) {
-      uploadStatus.textContent = `❌ Gagal: ${error.message}`;
+      // V: Menggunakan i18n
+      uploadStatus.textContent = `${chrome.i18n.getMessage('generalFailed')} ${error.message}`;
       uploadStatus.style.color = 'red';
       submitButton.disabled = false;
       fileInput.disabled = false;

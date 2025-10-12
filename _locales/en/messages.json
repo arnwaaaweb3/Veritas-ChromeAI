@@ -31,5 +31,71 @@
     },
     "clearHistoryButton": {
         "message": "Clear All History"
+    },
+    "loadingData": { 
+        "message": "Loading claim data..." 
+    },
+    "readyHeader": { 
+        "message": "Ready for Action" 
+    },
+    "readyClaim": { 
+        "message": "Ready for a New Fact Check." 
+    },
+    "readyInstruction1": { 
+        "message": "Instructions:" 
+    },
+    "readyInstruction2": { 
+        "message": "Highlight text & right-click (Check Text/Image Fact)." 
+    },
+    "readyInstruction3": { 
+        "message": "Or, use the upload feature below." 
+    },
+    "selectFileError": { 
+        "message": "❌ Please select an image file first." 
+    },
+    "claimLengthError": {
+        "message": "❌ Claim text is required (min 5 characters)."
+    },
+    "convertingImage": {
+        "message": "⏳ Converting image..."
+    },
+    "sendingToGemini": {
+        "message": "⏳ Sending to Gemini... (Check results tab above)"
+    },
+    "analysisSuccess": {
+        "message": "✅ Analysis Complete!"
+    },
+    "analysisFailed": {
+        "message": "❌ Analysis Failed (Check results tab above)"
+    },
+    "generalFailed": {
+        "message": "❌ Failed: "
+    },
+    "confirmClearHistory": {
+        "message": "Are you sure you want to delete ALL fact check history? This action cannot be undone."
+    },
+    "clearHistorySuccess": {
+        "message": "✅ All history successfully deleted!"
+    },
+    "loadingHistory": {
+        "message": "Loading history..."
+    },
+    "noHistory": {
+        "message": "No fact check history yet."
+    },
+    "saveKeySuccess": {
+        "message": "API Key saved successfully!"
+    },
+    "veritasErrorTitle": {
+        "message": "Error Processing"
+    },
+    "veritasErrorClaim": {
+        "message": "Fact check failed completely."
+    },
+    "veritasErrorDetail": {
+        "message": "Detail Error:"
+    },
+    "veritasLoadingMessage": {
+        "message": "Veritas is verifying this claim..."
     }
 }
