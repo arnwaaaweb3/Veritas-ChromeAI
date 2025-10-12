@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', initializePopup);
 const HISTORY_KEY = 'veritasHistory'; // Deklarasi HISTORY_KEY
 
 // Utility untuk memisahkan hasil Markdown (sesuai format baru di background.js)
+// Utility untuk memisahkan hasil Markdown (sesuai format baru di background.js)
 function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const rawMessage = result.message;
     
@@ -48,7 +49,10 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     
     if (reasonLines.length > 0) {
         reasonLines.forEach(line => {
-            reasonsHTML += `<li>${line.substring(1).trim()}</li>`; // Hapus tanda '-'
+            let itemContent = line.substring(1).trim(); // Hapus tanda '-'
+            // V: Konversi Bolding **text** ke <strong>text</strong> di dalam list item
+            itemContent = itemContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+            reasonsHTML += `<li>${itemContent}</li>`;
         });
     } else {
         reasonsHTML += `<li>(Alasan tidak terstruktur/terdeteksi dari AI)</li>`;
@@ -101,7 +105,6 @@ function renderErrorState(flag, message) {
     reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Detail Error:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`;
     linkDiv.innerHTML = '';
 }
-
 
 // 🔁 Utility untuk render spinner loading state
 function renderLoadingState(resultBox, claim) {
