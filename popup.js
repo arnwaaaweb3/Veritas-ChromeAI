@@ -1,9 +1,8 @@
-// popup.js (FINAL & STABIL: Structured Reasoning Rendering + History Fixes)
+// popup.js (FINAL & STABIL: Structured Reasoning Rendering + History Fixes + UX Patch 1 & 2)
 document.addEventListener('DOMContentLoaded', initializePopup);
 
 const HISTORY_KEY = 'veritasHistory'; // Deklarasi HISTORY_KEY
 
-// Utility untuk memisahkan hasil Markdown (sesuai format baru di background.js)
 // Utility untuk memisahkan hasil Markdown (sesuai format baru di background.js)
 function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const rawMessage = result.message;
@@ -50,7 +49,7 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     if (reasonLines.length > 0) {
         reasonLines.forEach(line => {
             let itemContent = line.substring(1).trim(); // Hapus tanda '-'
-            // V: Konversi Bolding **text** ke <strong>text</strong> di dalam list item
+            // Konversi Bolding **text** ke <strong>text</strong> di dalam list item
             itemContent = itemContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
             reasonsHTML += `<li>${itemContent}</li>`;
         });
@@ -106,6 +105,7 @@ function renderErrorState(flag, message) {
     linkDiv.innerHTML = '';
 }
 
+
 // 🔁 Utility untuk render spinner loading state
 function renderLoadingState(resultBox, claim) {
     const loadingDiv = document.getElementById('loadingState');
@@ -144,6 +144,13 @@ function getFactCheckResult() {
   
   chrome.storage.local.get(['lastFactCheckResult'], (storage) => {
     const result = storage.lastFactCheckResult;
+
+    // V: PATCH 2.6: Auto-Paste Highlighted Claim
+    const textClaimInput = document.getElementById('textClaimInput');
+    if (result && result.claim && textClaimInput && textClaimInput.value.trim() === '') {
+        // Hanya auto-paste jika input kosong
+        textClaimInput.value = result.claim;
+    }
 
     if (result && result.flag === 'loading') {
       renderLoadingState(resultOutputDiv, result.claim);
@@ -264,6 +271,7 @@ async function clearHistory() {
 }
 // --- HISTORY LOGIC (END) ---
 
+
 // --- INITIALIZATION (FIXED) ---
 
 function initializePopup() {
@@ -289,6 +297,7 @@ function initializePopup() {
     // Tentukan apakah Splash harus di-bypass (sudah pernah dilihat ATAU dibuka dari Contextual Check)
     const shouldBypassSplash = isContextualCheck || hasSeenSplash;
 
+
     if (shouldBypassSplash) {
       if (video) video.pause();
       if (splash) splash.style.display = 'none';
@@ -296,6 +305,7 @@ function initializePopup() {
 
       getFactCheckResult();
       setupUploadListener();
+      // Tab initialization moved outside
     } else {
       // V: Ini adalah run pertama kali secara manual. Set flag agar tidak muncul lagi
       chrome.storage.local.set({ 'hasSeenSplash': true }); 
@@ -313,6 +323,7 @@ function initializePopup() {
           if (main) main.classList.add('visible');
           getFactCheckResult();
           setupUploadListener();
+          // Tab initialization moved outside
         }, fadeOutTime);
       }, splashDuration);
 
@@ -325,6 +336,7 @@ function initializePopup() {
               main.classList.add('visible');
               getFactCheckResult();
               setupUploadListener();
+              // Tab initialization moved outside
             }, fadeOutTime);
           }
         });
@@ -341,6 +353,7 @@ function initializePopup() {
   document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 
 }
+
 
 // --- UPLOAD HANDLER (Tidak Berubah Signifikan) ---
 
@@ -403,7 +416,7 @@ function setupUploadListener() {
       
       renderLoadingState(document.getElementById('resultOutput'), textClaim);
 
-      // V: SISIPKAN BARIS INI UNTUK PERSISTENSI LOADING STATE 
+      // SISIPKAN BARIS INI UNTUK PERSISTENSI LOADING STATE 
       chrome.storage.local.set({ 'lastFactCheckResult': 
         { flag: 'loading', 
           claim: textClaim, 
