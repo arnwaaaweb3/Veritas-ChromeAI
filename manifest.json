@@ -40,5 +40,16 @@
       "enabled": true,
       "path": "rules.json" 
     }]
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*.png",
+        "icons/*.svg",
+        "icons/*.mp4",
+        "src/fonts/ParaRegular.tff"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
