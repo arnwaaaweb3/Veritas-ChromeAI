@@ -1,505 +1,443 @@
-// background.js (PATCH FINAL V7: Code Health Unification)
+// popup.js (FINAL & STABIL: Structured Reasoning Rendering + History Fixes + UX Patch 1 & 2)
+document.addEventListener('DOMContentLoaded', initializePopup);
 
-// --- LOCAL AI HELPER FUNCTIONS (START) ---
-function isLocalAiAvailable() {
-    return (typeof chrome !== 'undefined' && typeof chrome.ai !== 'undefined');
-}
+const HISTORY_KEY = 'veritasHistory'; // Deklarasi HISTORY_KEY
 
-async function runLocalPreProcessing(claimText) {
-    if (!isLocalAiAvailable()) {
-        console.warn("[Veritas LocalAI] Chrome AI tidak tersedia. Melewati pre-processing lokal.");
-        return claimText;
+// Utility untuk memisahkan hasil Markdown (sesuai format baru di background.js)
+function parseAndRenderResult(result, claimText, resultOutputDiv) {
+    const rawMessage = result.message;
+    
+    // 1. Cek jika pesan adalah Error
+    if (result.flag === 'Error') {
+        renderErrorState(result.flag, rawMessage);
+        return;
     }
 
-    try {
-        console.log("[Veritas LocalAI] Mulai pre-processing lokal menggunakan Prompt API.");
-        const localPrompt = `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi. Fokus pada fakta inti: "${claimText}"`;
-        
-        const response = await chrome.ai.generateContent({
-            model: 'text_model', 
-            prompt: localPrompt,
-            config: { maxOutputTokens: 128 }
+    // Tampilkan resultOutput dan sembunyikan loadingState
+    document.getElementById('loadingState').style.display = 'none';
+    resultOutputDiv.style.display = 'block';
+
+    const headerDiv = document.getElementById('resultHeader');
+    const claimDiv = document.getElementById('claimDisplay');
+    const reasonDiv = document.getElementById('reasoningBox');
+    const linkDiv = document.getElementById('linkBox');
+    
+    // --- Parsing Logic ---
+    
+    // Pisahkan berdasarkan header: Reason: dan Link:
+    const reasonSplit = rawMessage.split('Reason:');
+    const linkSplit = (reasonSplit.length > 1) ? reasonSplit[1].split('Link:') : [rawMessage, ''];
+    
+    const flagClaimRaw = reasonSplit[0].trim();
+    const rawReasonings = linkSplit[0].trim();
+    const rawLinks = (linkSplit.length > 1) ? linkSplit[1].trim() : "";
+    
+    // 1. Render Header dan Klaim
+    const firstLineMatch = flagClaimRaw.match(/^(.)+!/); // Ambil baris pertama (Flag Symbol + Text)
+    const claimMatch = flagClaimRaw.match(/\*\*(.*?)\*\*/); // Ambil klaim di antara **
+    
+    const headerText = firstLineMatch ? firstLineMatch[0] : `[${result.flag}] ${claimText}`;
+
+    headerDiv.className = result.flag;
+    headerDiv.innerHTML = `<span class="flag-symbol">${headerText.split(' ')[0]}</span> <span>${headerText.split(' ').slice(1).join(' ')}</span>`;
+    claimDiv.textContent = claimMatch ? claimMatch[1] : claimText;
+    
+    // 2. Render Reasonings (Mengubah Markdown List ke HTML List)
+    let reasonsHTML = '<p>Reason:</p><ul>';
+    const reasonLines = rawReasonings.split('\n').filter(line => line.startsWith('-'));
+    
+    if (reasonLines.length > 0) {
+        reasonLines.forEach(line => {
+            let itemContent = line.substring(1).trim(); // Hapus tanda '-'
+            // Konversi Bolding **text** ke <strong>text</strong> di dalam list item
+            itemContent = itemContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+            reasonsHTML += `<li>${itemContent}</li>`;
         });
-
-        const simplifiedText = response.text.trim();
-        
-        if (simplifiedText && simplifiedText.length > 5 && simplifiedText.length < claimText.length * 1.5) { 
-             console.log("[Veritas LocalAI] Klaim disederhanakan:", simplifiedText);
-             return simplifiedText;
-        } else {
-             console.warn("[Veritas LocalAI] Hasil penyederhanaan lokal tidak valid. Menggunakan klaim asli.");
-             return claimText;
-        }
-
-    } catch (error) {
-        console.error("[Veritas LocalAI] Gagal menjalankan Prompt API lokal:", error);
-        return claimText; 
+    } else {
+        reasonsHTML += `<li>(Alasan tidak terstruktur/terdeteksi dari AI)</li>`;
     }
+    reasonsHTML += '</ul>';
+    reasonDiv.innerHTML = reasonsHTML;
+
+
+    // 3. Render Links (Mengubah Markdown Link ke HTML List)
+    let linksHTML = '<p>Link:</p><ul>';
+    const linkLines = rawLinks.split('\n').filter(line => line.startsWith('-'));
+    const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+
+    if (linkLines.length > 0) {
+        linkLines.forEach(line => {
+            const linkMatch = linkRegex.exec(line);
+            if (linkMatch && linkMatch.length >= 3) {
+                // LinkMatch[1] = title, LinkMatch[2] = URL
+                linksHTML += `<li><a href="${linkMatch[2]}" target="_blank">${linkMatch[1]}</a></li>`;
+            } else {
+                 // Jika format link gagal, tampilkan sebagai teks biasa
+                 linksHTML += `<li>${line.substring(1).trim()}</li>`; 
+            }
+            linkRegex.lastIndex = 0; // Reset regex index
+        });
+    } else {
+        linksHTML += `<li>(Tidak ada sumber eksternal yang terdeteksi)</li>`;
+    }
+    linksHTML += '</ul>';
+    linkDiv.innerHTML = linksHTML;
 }
-// --- LOCAL AI HELPER FUNCTIONS (END) ---
+
+// Utility untuk render error (tetap pakai struktur lama agar ringkas)
+function renderErrorState(flag, message) {
+    const outputDiv = document.getElementById('resultOutput');
+    const loadingDiv = document.getElementById('loadingState');
+    
+    loadingDiv.style.display = 'none';
+    outputDiv.style.display = 'block';
+
+    const headerDiv = document.getElementById('resultHeader');
+    const claimDiv = document.getElementById('claimDisplay');
+    const reasonDiv = document.getElementById('reasoningBox');
+    const linkDiv = document.getElementById('linkBox');
+    
+    // Tampilkan pesan error di div reasoning agar terlihat
+    headerDiv.className = 'Error';
+    headerDiv.innerHTML = `<span class="flag-symbol">❌</span> <span>Error Processing</span>`;
+    claimDiv.textContent = 'Pengecekan gagal total.';
+    reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Detail Error:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`;
+    linkDiv.innerHTML = '';
+}
+
+
+// 🔁 Utility untuk render spinner loading state
+function renderLoadingState(resultBox, claim) {
+    const loadingDiv = document.getElementById('loadingState');
+    const outputDiv = document.getElementById('resultOutput');
+    const claimText = document.getElementById('loadingClaimText');
+    const factCheckTab = document.getElementById('factCheckTab');
+
+    // Pastikan Fact Check tab terlihat saat loading
+    factCheckTab.style.display = 'block';
+
+    outputDiv.style.display = 'none';
+    loadingDiv.style.display = 'flex';
+    claimText.textContent = `"${claim || 'Memuat data klaim...'}"`;
+}
+
+
+// ✅ Listener utama untuk update hasil dari background (digunakan untuk update live saat sedang loading)
+function handleLiveResultUpdate(request, sender, sendResponse) {
+  if (request.action === 'updateFinalResult' || request.action === 'displayResult' || request.action === 'finalResultUpdate') {
+    const resultOutputDiv = document.getElementById('resultOutput');
+
+    const { flag, message, claim } = request.resultData;
+    
+    if (flag === 'loading') {
+      renderLoadingState(resultOutputDiv, claim);
+      return;
+    }
+
+    parseAndRenderResult(request.resultData, claim, resultOutputDiv);
+  }
+}
+
+// ✅ Ambil hasil dari storage (misal ketika popup baru dibuka)
+function getFactCheckResult() {
+  const resultOutputDiv = document.getElementById('resultOutput');
+  
+  chrome.storage.local.get(['lastFactCheckResult'], (storage) => {
+    const result = storage.lastFactCheckResult;
+
+    // V: PATCH 2.6: Auto-Paste Highlighted Claim
+    const textClaimInput = document.getElementById('textClaimInput');
+    if (result && result.claim && textClaimInput && textClaimInput.value.trim() === '') {
+        // Hanya auto-paste jika input kosong
+        textClaimInput.value = result.claim;
+    }
+
+    if (result && result.flag === 'loading') {
+      renderLoadingState(resultOutputDiv, result.claim);
+      return;
+    }
+
+    if (result && result.message) {
+      parseAndRenderResult(result, result.claim, resultOutputDiv);
+      return;
+    } 
+
+    // Default state jika tidak ada hasil
+    document.getElementById('loadingState').style.display = 'none';
+    resultOutputDiv.style.display = 'block';
+    document.getElementById('resultHeader').className = 'Kuning';
+    document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol">💡</span> <span>Ready for Action</span>`;
+    document.getElementById('claimDisplay').textContent = 'Siap untuk Cek Fakta Baru.';
+    document.getElementById('reasoningBox').innerHTML = `<p>Instruksi:</p><ul><li>Sorot teks & klik kanan (Cek Fakta Teks/Gambar).</li><li>Atau, gunakan fitur upload di bawah.</li></ul>`;
+    document.getElementById('linkBox').innerHTML = '';
+    
+  });
+}
 
 // --- HISTORY LOGIC (START) ---
-const HISTORY_KEY = 'veritasHistory';
-const MAX_HISTORY_ITEMS = 20;
 
-async function saveFactCheckToHistory(result) {
-    if (!result || result.flag === 'Error') return;
+function switchTab(tabName) {
+    const factCheckTab = document.getElementById('factCheckTab');
+    const historyTab = document.getElementById('historyTab');
+    const tabFCButton = document.getElementById('tabFactCheck');
+    const tabHButton = document.getElementById('tabHistory');
 
-    const historyItem = {
-        ...result,
-        timestamp: Date.now()
-    };
+    if (tabName === 'history') {
+        factCheckTab.style.display = 'none';
+        historyTab.style.display = 'block';
+        
+        // --- Perubahan Style di Sini ---
+        tabFCButton.classList.remove('active');
+        tabHButton.classList.add('active');
+        // --- End Perubahan Style ---
+        
+        renderHistory();
+        
+    } else { // 'factCheck'
+        factCheckTab.style.display = 'block';
+        historyTab.style.display = 'none';
+        
+        // --- Perubahan Style di Sini ---
+        tabHButton.classList.remove('active');
+        tabFCButton.classList.add('active');
+        // --- End Perubahan Style ---
+    }
+}
+
+async function renderHistory() {
+    const historyList = document.getElementById('historyList');
+    const status = document.getElementById('historyStatus');
+
+    historyList.innerHTML = '';
+    status.textContent = 'Memuat riwayat...';
+    status.style.display = 'block';
 
     const storage = await chrome.storage.local.get([HISTORY_KEY]);
     const history = storage[HISTORY_KEY] || [];
 
-    history.unshift(historyItem);
-
-    if (history.length > MAX_HISTORY_ITEMS) {
-        history.splice(MAX_HISTORY_ITEMS);
+    if (history.length === 0) {
+        status.textContent = 'Belum ada riwayat pengecekan fakta.';
+        return;
     }
 
-    chrome.storage.local.set({ [HISTORY_KEY]: history });
-    console.log("[Veritas History] Hasil Fact Check berhasil disimpan.");
+    status.style.display = 'none';
+
+    history.forEach((item, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = `history-item ${item.flag}`;
+        
+        // Ambil summary singkat dari reasoning (teks setelah Flag)
+        const summary = item.message.split('Reason:')[0].replace(/\*\*(.*?)\*\*/, '').trim().substring(0, 100) + '...';
+
+        const date = new Date(item.timestamp).toLocaleString();
+
+        itemDiv.innerHTML = `
+            <span class="history-timestamp">${date}</span>
+            <div class="history-claim">${item.claim.substring(0, 50)}...</div>
+            <div style="font-size: 12px; color: #444;">${summary}</div>
+            <span class="history-flag ${item.flag}">${item.flag.toUpperCase()}</span>
+        `;
+        
+        // Event listener untuk memuat kembali item dari history ke Fact Check tab
+        itemDiv.addEventListener('click', () => {
+            // Kita gunakan logic dari handleLiveResultUpdate untuk menampilkan data
+            handleLiveResultUpdate({
+                action: 'displayResult', 
+                resultData: item 
+            });
+            switchTab('factCheck'); // Kembali ke Fact Check tab
+        });
+
+        historyList.appendChild(itemDiv);
+    });
+  
+}
+
+// SNIPPET 4C: Fungsi clearHistory di popup.js
+async function clearHistory() {
+    if (confirm("Apakah Anda yakin ingin menghapus SEMUA riwayat pengecekan fakta? Aksi ini tidak dapat dibatalkan.")) {
+        
+        // Hapus array History dari local storage
+        chrome.storage.local.remove(HISTORY_KEY, () => {
+            // Setelah dihapus, refresh tampilan history
+            renderHistory(); 
+            
+            // Beri notifikasi ke user
+            const status = document.getElementById('historyStatus');
+            status.textContent = '✅ Semua riwayat berhasil dihapus!';
+            status.style.display = 'block';
+        });
+    }
 }
 // --- HISTORY LOGIC (END) ---
 
 
-// FUNGSI 1: MENGIRIM HASIL KE POPUP
-function sendResultToPopup(result, isContextual = false) { 
-    chrome.storage.local.set({ 
-        'lastFactCheckResult': result,
-        'isContextualCheck': isContextual 
-    }, () => {
-        chrome.action.openPopup(); 
-    });
+// --- INITIALIZATION (FIXED) ---
+
+function initializePopup() {
+  const splash = document.getElementById('splashScreen');
+  const main = document.getElementById('mainContent');
+  const video = document.getElementById('splashVideo');
+
+  const splashDuration = 5000;
+  const fadeOutTime = 500;
+
+  chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
+
+  // V: Ambil 2 flag: isContextualCheck (dari klik kanan) dan hasSeenSplash (dari manual open)
+  chrome.storage.local.get(['isContextualCheck', 'hasSeenSplash'], (storage) => {
+    const isContextualCheck = storage.isContextualCheck;
+    const hasSeenSplash = storage.hasSeenSplash;
+    
+    // Hapus flag contextual check setelah diambil
+    if (isContextualCheck) {
+        chrome.storage.local.remove('isContextualCheck');
+    }
+
+    // Tentukan apakah Splash harus di-bypass (sudah pernah dilihat ATAU dibuka dari Contextual Check)
+    const shouldBypassSplash = isContextualCheck || hasSeenSplash;
+
+
+    if (shouldBypassSplash) {
+      if (video) video.pause();
+      if (splash) splash.style.display = 'none';
+      if (main) main.classList.add('visible');
+
+      getFactCheckResult();
+      setupUploadListener();
+      // Tab initialization moved outside
+    } else {
+      // V: Ini adalah run pertama kali secara manual. Set flag agar tidak muncul lagi
+      chrome.storage.local.set({ 'hasSeenSplash': true }); 
+        
+      if (video) {
+        video.pause();
+        video.currentTime = 0;
+        video.play();
+      }
+
+      setTimeout(() => {
+        if (splash) splash.classList.add('fade-out');
+        setTimeout(() => {
+          if (splash) splash.style.display = 'none';
+          if (main) main.classList.add('visible');
+          getFactCheckResult();
+          setupUploadListener();
+          // Tab initialization moved outside
+        }, fadeOutTime);
+      }, splashDuration);
+
+      if (video) {
+        video.addEventListener('ended', () => {
+          if (splash && splash.style.display !== 'none') {
+            splash.classList.add('fade-out');
+            setTimeout(() => {
+              splash.style.display = 'none';
+              main.classList.add('visible');
+              getFactCheckResult();
+              setupUploadListener();
+              // Tab initialization moved outside
+            }, fadeOutTime);
+          }
+        });
+      }
+    }
+    
+    // FIX BUG KRITIS #2: Initialization tombol tab dipindahkan ke luar conditional
+    document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
+    document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
+    switchTab('factCheck'); // Set default tab
+  });
+
+  // SNIPPET 4B: Listener di popup.js
+  document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
+
 }
 
-// FUNGSI BARU: Mengirim Notifikasi Chrome (PATCH: Interactive Error)
-function sendFactCheckNotification(claimText, isSuccess) {
-    chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/veritas48.png', 
-        title: isSuccess ? '✅ Fact Check Selesai!' : '❌ Fact Check Gagal',
-        message: isSuccess 
-            ? `Klaim: "${claimText}". Klik icon Veritas untuk melihat hasilnya.`
-            : `Gagal memproses klaim "${claimText}". Silakan coba lagi.`,
-        // V: requireInteraction: true HANYA jika GAGAL (isSuccess = false)
-        requireInteraction: !isSuccess 
-    });
-}
 
-// ====================================================================
-// FUNGSI 2: CONTEXT MENU SETUP
-// ====================================================================
+// --- UPLOAD HANDLER (Tidak Berubah Signifikan) ---
 
-chrome.runtime.onInstalled.addListener(() => {
-    // Menu 1: Cek Fakta Teks (Selection)
-    chrome.contextMenus.create({
-        id: "veritasFactCheckText",
-        title: "Veritas: Cek Fakta Klaim Teks",
-        contexts: ["selection"] 
-    });
+function setupUploadListener() {
+  const fileInput = document.getElementById('imageFileInput');
+  const textInput = document.getElementById('textClaimInput');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const submitButton = document.getElementById('submitUploadButton');
 
-    // Menu 2: Cek Fakta Multimodal (Gambar)
-    chrome.contextMenus.create({
-        id: "veritasFactCheckMultimodal",
-        title: "Veritas: Cek Fakta Klaim + Gambar",
-        contexts: ["image"] 
-    });
-    console.log("Veritas Context Menu Teks & Multimodal dibuat.");
-});
+  if (!submitButton) return;
 
-// ====================================================================
-// FUNGSI 3: LISTENER UTAMA CONTEXT MENU (Klik Kanan) (PATCH: Retry Logic)
-// ====================================================================
+  submitButton.addEventListener('click', async () => {
+    const file = fileInput.files[0];
+    const textClaim = textInput.value.trim();
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-    
-    const selectedText = info.selectionText;
-    
-    if (info.menuItemId === "veritasFactCheckText" || info.menuItemId === "veritasFactCheckMultimodal") {
-        
-        if (!selectedText || selectedText.trim().length === 0) {
-            let result = { flag: "Error", message: "Silakan sorot teks yang ingin Anda periksa faktanya.", claim: "Pengecekan Gagal" };
-            sendResultToPopup(result);
-            return;
-        }
-
-        const isTextMode = info.menuItemId === "veritasFactCheckText";
-        const currentTabId = tab.id;
-
-        // 1. Set status Loading DAN kirim ke Floating Panel (context_result.js)
-        const loadingResult = {
-            flag: 'loading',
-            claim: selectedText,
-            message: "Veritas sedang memverifikasi klaim ini..."
-        };
-
-        // Inject content script (context_result.js)
-        await chrome.scripting.executeScript({
-            target: { tabId: currentTabId },
-            files: ['context_result.js'] 
-        });
-        
-        // V: Kirim update loading ke panel yang baru di-inject DENGAN RETRY (Fix Race Condition)
-        for (let attempt = 0; attempt < 3; attempt++) {
-            try {
-                await chrome.tabs.sendMessage(currentTabId, { action: 'finalResultUpdate', resultData: loadingResult });
-                console.log(`[Veritas Context] Loading state sent after ${attempt + 1} attempt(s).`);
-                break;
-            } catch (e) {
-                console.warn(`[Veritas Context] Gagal kirim pesan (attempt ${attempt + 1}). Mencoba lagi...`, e);
-                await new Promise(res => setTimeout(res, 200)); // Tunggu 200ms
-            }
-        }
-
-        // Simpan juga loading state ke storage (untuk popup jika dibuka)
-        chrome.storage.local.set({
-            'lastFactCheckResult': loadingResult,
-            'isContextualCheck': true 
-        });
-
-
-        let result = null;
-        
-        if (isTextMode) {
-            // Jalankan API Call (Async)
-            result = await runFactCheckHybrid(selectedText); 
-        } else {
-            // Jalankan API Call Multimodal 
-            const imageUrl = info.srcUrl; 
-            const text = info.selectionText || "TIDAK ADA TEKS SOROTAN.";
-            result = await runFactCheckMultimodalUrl(imageUrl, text);
-        }
-
-        // 2. Setelah API Selesai, kirim hasil ke Floating Panel di halaman aktif
-        if (result) {
-            sendFactCheckNotification(selectedText, result.flag !== 'Error');
-            chrome.storage.local.set({'lastFactCheckResult': result});
-
-            // ✅ Langsung update Floating Panel di tab aktif
-            chrome.tabs.sendMessage(currentTabId, {
-                action: 'finalResultUpdate',
-                resultData: result
-            });
-        }
+    if (!file) {
+      uploadStatus.textContent = '❌ Pilih file gambar dulu.';
+      uploadStatus.style.color = 'red';
+      return;
     }
-});
 
-// ====================================================================
-// FUNGSI 4: LISTENER UNTUK UPLOAD DARI POPUP
-// ====================================================================
-
-chrome.runtime.onMessage.addListener(
-    (request, sender, sendResponse) => {
-        if (request.action === 'multimodalUpload') {
-            const { base64, mimeType, claim } = request;
-            
-            console.log("[Veritas Upload] Menerima Base64 data dari popup.");
-
-            runFactCheckMultimodalDirect(base64, mimeType, claim).then(result => {
-                sendFactCheckNotification(claim, result.flag !== 'Error');
-                chrome.storage.local.set({'lastFactCheckResult': result});
-
-                chrome.runtime.sendMessage({
-                    action: 'updateFinalResult',
-                    resultData: result
-                });
-                sendResponse({ success: true, result: result }); 
-                
-            }).catch(error => {
-                const errorResult = { flag: "Error", message: `Gagal Fact Check Upload: ${error.message}`, claim: claim };
-                sendFactCheckNotification(claim, false);
-                chrome.storage.local.set({'lastFactCheckResult': errorResult});
-
-                chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
-                sendResponse({ success: false, error: errorResult });
-            });
-
-            return true; 
-        }
+    if (textClaim.length < 5) {
+      uploadStatus.textContent = '❌ Klaim teks wajib diisi (minimal 5 karakter).';
+      uploadStatus.style.color = 'red';
+      return;
     }
-);
 
-// ====================================================================
-// FUNGSI INTI: PANGGILAN API GEMINI (Cloud API Core Handler)
-// V: UNIFIKASI LOGIC (Dulu duplikasi di FUNGSI 5 dan FUNGSI 8)
-// ====================================================================
+    submitButton.disabled = true;
+    fileInput.disabled = true;
+    textInput.disabled = true;
 
-async function executeGeminiCall(claim, contents) {
-    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    const geminiApiKey = resultStorage.geminiApiKey;
-
-    if (!geminiApiKey) {
-        return { 
-            flag: "Error", 
-            message: "API Key Gemini belum diatur. Akses Cloud diblokir.",
-            debug: "Missing API Key"
-        };
-    }
-    
-    // V: Payload sudah menyertakan tools: googleSearch
-    const payload = {
-        contents: contents,
-        tools: [{ googleSearch: {} }] 
-    };
+    uploadStatus.textContent = '⏳ Mengonversi gambar...';
+    uploadStatus.style.color = 'blue';
 
     try {
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": geminiApiKey 
-            },
-            body: JSON.stringify(payload) 
-        });
+      const base64Data = await readFileAsBase64(file);
+      const mimeType = file.type;
 
-        const data = await response.json();
-        
-        // V: Parsing & Error Handling yang Robust
-        if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-            // ROBUST PARSING: Gabungkan semua parts text jika ada multi-part
-            const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim(); 
-            const firstLine = aiResponse.split('\n')[0].trim();
-            
-            let flag = "Kuning"; 
-            let flagSymbol = "🟡 ALERT!";
-            
-            if (firstLine.toUpperCase().startsWith("FAKTA")) {
-                flag = "Hijau";
-                flagSymbol = "🟢 FACT!";
-            } else if (firstLine.toUpperCase().startsWith("MISINFORMASI")) {
-                flag = "Merah";
-                flagSymbol = "🔴 FALSE!";
-            }
-            
-            // --- NEW FORMATTING LOGIC START ---
-            
-            const parts = aiResponse.split('=');
-            const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : aiResponse.trim();
-            
-            const groundingMetadata = data.candidates[0].groundingMetadata;
-            let linksOutput = "\nLink:\n- (Tidak ada sumber eksternal yang terdeteksi)";
-            
-            if (groundingMetadata && groundingMetadata.groundingChunks) {
-                const uniqueLinks = new Map();
-                groundingMetadata.groundingChunks
-                    .filter(chunk => chunk.web && chunk.web.uri)
-                    .forEach(chunk => {
-                        const title = chunk.web.title || chunk.web.uri.split('/')[2];
-                        uniqueLinks.set(chunk.web.uri, title);
-                    });
-                
-                if (uniqueLinks.size > 0) {
-                     linksOutput = "\nLink:";
-                     uniqueLinks.forEach((title, uri) => {
-                         linksOutput += `\n- [${title}](${uri})`;
-                     });
-                }
-            }
+      uploadStatus.textContent = '⏳ Mengirim ke Gemini... (Cek di kolom hasil di atas)';
 
-            const formattedMessage = `
-${flagSymbol} 
-**"${claim}"**
-Reason:
-${rawReasoning}
-${linksOutput}
-            `.trim();
-            
-            const finalResult = {
-                flag: flag,
-                message: formattedMessage,
-                claim: claim
-            };
-            
-            saveFactCheckToHistory(finalResult); // PANGGIL HISTORY
-            return finalResult;
-            // --- NEW FORMATTING LOGIC END ---
+      chrome.runtime.sendMessage({
+        action: 'multimodalUpload',
+        base64: base64Data.split(',')[1],
+        mimeType: mimeType,
+        claim: textClaim
+      }, (response) => {
+        submitButton.disabled = false;
+        fileInput.disabled = false;
+        textInput.disabled = false;
+        uploadStatus.textContent = ''; 
 
-        } else if (data.error) {
-            return {
-                flag: "Error",
-                message: `API Error: ${data.error.message}`,
-                debug: JSON.stringify(data.error)
-            };
+        if (response && response.success) {
+            uploadStatus.textContent = '✅ Analisis Selesai!';
+            uploadStatus.style.color = 'green';
         } else {
-            let detailedError = "Gagal memproses AI. Respons tidak terduga (Kemungkinan API Key bermasalah atau klaim diblokir).";
-            if (data.promptFeedback && data.promptFeedback.blockReason) {
-                detailedError = `Klaim diblokir oleh Safety Filter: ${data.promptFeedback.blockReason}`;
-            } else if (data.candidates && data.candidates.length === 0) {
-                detailedError = "Respons AI kosong. Kemungkinan masalah konfigurasi atau filter keamanan.";
-            }
-
-            return {
-                flag: "Error",
-                message: detailedError,
-                debug: JSON.stringify(data)
-            };
+            uploadStatus.textContent = '❌ Gagal Analisis (Cek di kolom hasil di atas)';
+            uploadStatus.style.color = 'red';
         }
+      });
+      
+      renderLoadingState(document.getElementById('resultOutput'), textClaim);
+
+      // SISIPKAN BARIS INI UNTUK PERSISTENSI LOADING STATE 
+      chrome.storage.local.set({ 'lastFactCheckResult': 
+        { flag: 'loading', 
+          claim: textClaim, 
+          message: 'Veritas sedang memverifikasi klaim ini...' } 
+      });
 
     } catch (error) {
-        console.error("[Veritas Cloud Call] Kesalahan Fatal Fetch:", error);
-        return {
-            flag: "Error",
-            message: `Kesalahan Jaringan/Fatal: ${error.message}`,
-            debug: error.message
-        };
+      uploadStatus.textContent = `❌ Gagal: ${error.message}`;
+      uploadStatus.style.color = 'red';
+      submitButton.disabled = false;
+      fileInput.disabled = false;
+      textInput.disabled = false;
     }
+  });
 }
 
-
-// ====================================================================
-// FUNGSI 5: RUN FACT CHECK HYBRID (TEKS ONLY) 
-// V: SUDAH DIREFACTOR MENJADI PANGGILAN executeGeminiCall
-// ====================================================================
-
-async function runFactCheckHybrid(text) {
-    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    const geminiApiKey = resultStorage.geminiApiKey;
-    
-    // --- 1. HANDLE NO API KEY / FALLBACK KE LOCAL AI (Logic Unik) ---
-    if (!geminiApiKey) {
-        if (isLocalAiAvailable()) {
-            console.log("[Veritas Hybrid] API Key hilang. Melakukan verifikasi menggunakan AI Lokal (On-Device).");
-
-            const localPrompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${text}", berdasarkan pengetahuan internal Anda. Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'. Diikuti dengan alasan singkat dan jelas.`;
-
-            const localResult = await chrome.ai.generateContent({
-                model: 'gemini-flash', 
-                prompt: localPrompt,
-                config: { maxOutputTokens: 256 }
-            });
-
-            const aiResponse = localResult.text.trim();
-            const upperResponse = aiResponse.toUpperCase();
-            let flag = "Kuning";
-            if (upperResponse.startsWith("FAKTA")) { flag = "Hijau"; } 
-            else if (upperResponse.startsWith("MISINFORMASI")) { flag = "Merah"; }
-
-            const finalResult = {
-                flag: flag,
-                message: aiResponse + " [VERIFIKASI INI HANYA BERDASARKAN PENGETAHUAN LOKAL/INTERNAL CHROME. Mohon masukkan API Key untuk verifikasi Real-Time (Grounding).]",
-                claim: text
-            };
-            
-            saveFactCheckToHistory(finalResult);
-            return finalResult;
-        }
-
-        return { 
-            flag: "Error", 
-            message: "API Key Gemini belum diatur. Buka Pengaturan Veritas (klik kanan ikon ekstensi > Options) dan simpan API Key kamu. (Gagal menggunakan AI Lokal/Cloud)",
-            debug: "Missing API Key & Local AI Unavailable"
-        };
-    }
-    
-    // --- 2. JIKA API KEY ADA: Gunakan pipeline Local Pre-processing + executeGeminiCall ---
-    
-    const processedText = await runLocalPreProcessing(text);
-    
-    // Prompt yang sudah dioptimalkan
-    const prompt = `Anda adalah Veritas AI, spesialis cek fakta. Tugas Anda adalah VERIFIKASI klaim ini: "${processedText}". Gunakan Google Search untuk mendapatkan informasi real-time dan WAJIB sertakan fakta terbaru yang mendukung penilaian Anda. **Terapkan Format Keluaran Ketat ini:** (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
-    
-    console.log("[Veritas Hybrid] Mengirim prompt ke Gemini Cloud (dengan Google Search)...");
-    
-    const contents = [{ role: "user", parts: [{ text: prompt }] }];
-
-    return executeGeminiCall(text, contents);
-}
-
-// ====================================================================
-// FUNGSI 6: URL KE BASE64 UTILITY (Untuk Multimodal URL)
-// ====================================================================
-
-async function urlToBase64(url) {
-    console.log("[Veritas Multimodal] Fetching image dari URL...");
-    
-    const response = await fetch(url);
-    
-    // V: Dapatkan MIME type dari header respons, fallback ke image/jpeg
-    const mimeType = response.headers.get('content-type') || 'image/jpeg';
-    
-    const blob = await response.blob();
-
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64String = reader.result;
-            if (base64String) {
-                // V: Resolve dengan object yang menyertakan MIME type dan base64
-                resolve({ 
-                    base64: base64String.split(',')[1], 
-                    mimeType: mimeType 
-                }); 
-            } else {
-                reject(new Error("Gagal konversi ke Base64."));
-            }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
-
-// ====================================================================
-// FUNGSI 7: RUN FACT CHECK MULTIMODAL (via URL Klik Kanan)
-// ====================================================================
-
-async function runFactCheckMultimodalUrl(imageUrl, text) {
-    try {
-        const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-        const geminiApiKey = resultStorage.geminiApiKey;
-
-        if (!geminiApiKey) {
-            return { flag: "Error", message: "API Key Gemini belum diatur. Multimodal saat ini membutuhkan akses Cloud.", claim: "Multimodal Check Failed" };
-        }
-        
-        // V: Destrukturisasi untuk mendapatkan base64 dan mimeType dari fungsi baru
-        const { base64: base64Image, mimeType } = await urlToBase64(imageUrl);
-
-        return runFactCheckMultimodalDirect(base64Image, mimeType, text);
-
-    } catch (error) {
-        console.error("[Veritas Multimodal] Kesalahan Fatal Fetch/Base64:", error);
-        return {
-            flag: "Error",
-            message: `Kesalahan Jaringan/Fatal (Gagal Fetch Gambar): ${error.message}`,
-            debug: error.message
-        };
-    }
-}
-
-
-// ====================================================================
-// FUNGSI 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 dari Upload/Fungsi Lain)
-// V: SUDAH DIREFACTOR MENJADI PANGGILAN executeGeminiCall
-// ====================================================================
-
-async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
-    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    const geminiApiKey = resultStorage.geminiApiKey;
-
-    if (!geminiApiKey) {
-        return { flag: "Error", message: "API Key Gemini belum diatur. Akses Cloud diblokir.", claim: "Multimodal Check Failed" };
-    }
-    
-    // Prompt yang sudah dioptimalkan
-    const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan dan VERIFIKASI klaim ini: "${text}", dengan (1) gambar yang diberikan dan (2) konteks eksternal dari Google Search. WAJIB sertakan temuan yang mendukung. **Terapkan Format Keluaran Ketat ini:** (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
-
-    console.log("[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
-
-    const contents = [
-        {
-            role: "user",
-            parts: [
-                { text: promptText },
-                { inlineData: { 
-                    mimeType: mimeType, 
-                    data: base64Image
-                }}
-            ]
-        }
-    ];
-
-    return executeGeminiCall(text, contents);
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
 }

@@ -7,13 +7,19 @@ function isLocalAiAvailable() {
 
 async function runLocalPreProcessing(claimText) {
     if (!isLocalAiAvailable()) {
-        console.warn("[Veritas LocalAI] Chrome AI tidak tersedia. Melewati pre-processing lokal.");
+        console.warn(
+            "[Veritas LocalAI] Chrome AI tidak tersedia. Melewati pre-processing lokal."
+        );
         return claimText;
     }
 
     try {
-        console.log("[Veritas LocalAI] Mulai pre-processing lokal menggunakan Prompt API.");
-        const localPrompt = `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi. Fokus pada fakta inti: "${claimText}"`;
+        console.log(
+            "[Veritas LocalAI] Mulai pre-processing lokal menggunakan Prompt API."
+        );
+        const localPrompt = 
+        `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi.
+        Fokus pada fakta inti: "${claimText}"`;
         
         const response = await chrome.ai.generateContent({
             model: 'text_model', 
@@ -24,15 +30,21 @@ async function runLocalPreProcessing(claimText) {
         const simplifiedText = response.text.trim();
         
         if (simplifiedText && simplifiedText.length > 5 && simplifiedText.length < claimText.length * 1.5) { 
-             console.log("[Veritas LocalAI] Klaim disederhanakan:", simplifiedText);
+             console.log(
+                "[Veritas LocalAI] Klaim disederhanakan:", simplifiedText
+            );
              return simplifiedText;
         } else {
-             console.warn("[Veritas LocalAI] Hasil penyederhanaan lokal tidak valid. Menggunakan klaim asli.");
+             console.warn(
+                "[Veritas LocalAI] Hasil penyederhanaan lokal tidak valid. Menggunakan klaim asli."
+            );
              return claimText;
         }
 
     } catch (error) {
-        console.error("[Veritas LocalAI] Gagal menjalankan Prompt API lokal:", error);
+        console.error(
+            "[Veritas LocalAI] Gagal menjalankan Prompt API lokal:", error
+        );
         return claimText; 
     }
 }
@@ -60,7 +72,9 @@ async function saveFactCheckToHistory(result) {
     }
 
     chrome.storage.local.set({ [HISTORY_KEY]: history });
-    console.log("[Veritas History] Hasil Fact Check berhasil disimpan.");
+    console.log(
+        "[Veritas History] Hasil Fact Check berhasil disimpan."
+    );
 }
 // --- HISTORY LOGIC (END) ---
 
@@ -107,7 +121,9 @@ chrome.runtime.onInstalled.addListener(() => {
         title: "Veritas: Cek Fakta Klaim + Gambar",
         contexts: ["image"] 
     });
-    console.log("Veritas Context Menu Teks & Multimodal dibuat.");
+    console.log(
+        "Veritas Context Menu Teks & Multimodal dibuat."
+    );
 });
 
 // ====================================================================
@@ -146,10 +162,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         for (let attempt = 0; attempt < 3; attempt++) {
             try {
                 await chrome.tabs.sendMessage(currentTabId, { action: 'finalResultUpdate', resultData: loadingResult });
-                console.log(`[Veritas Context] Loading state sent after ${attempt + 1} attempt(s).`);
+                console.log(
+                    `[Veritas Context] Loading state sent after ${attempt + 1} attempt(s).`
+                );
                 break;
             } catch (e) {
-                console.warn(`[Veritas Context] Gagal kirim pesan (attempt ${attempt + 1}). Mencoba lagi...`, e);
+                console.warn(
+                    `[Veritas Context] Gagal kirim pesan (attempt ${attempt + 1}). Mencoba lagi...`, e
+                );
                 await new Promise(res => setTimeout(res, 200)); // Tunggu 200ms
             }
         }
@@ -196,7 +216,9 @@ chrome.runtime.onMessage.addListener(
         if (request.action === 'multimodalUpload') {
             const { base64, mimeType, claim } = request;
             
-            console.log("[Veritas Upload] Menerima Base64 data dari popup.");
+            console.log(
+                "[Veritas Upload] Menerima Base64 data dari popup."
+            );
 
             runFactCheckMultimodalDirect(base64, mimeType, claim).then(result => {
                 sendFactCheckNotification(claim, result.flag !== 'Error');
@@ -246,7 +268,8 @@ async function executeGeminiCall(claim, contents) {
     };
 
     try {
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+        const response = await fetch(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -324,11 +347,14 @@ ${linksOutput}
                 debug: JSON.stringify(data.error)
             };
         } else {
-            let detailedError = "Gagal memproses AI. Respons tidak terduga (Kemungkinan API Key bermasalah atau klaim diblokir).";
+            let detailedError = 
+            "Gagal memproses AI. Respons tidak terduga (Kemungkinan API Key bermasalah atau klaim diblokir).";
             if (data.promptFeedback && data.promptFeedback.blockReason) {
-                detailedError = `Klaim diblokir oleh Safety Filter: ${data.promptFeedback.blockReason}`;
+                detailedError = 
+                `Klaim diblokir oleh Safety Filter: ${data.promptFeedback.blockReason}`;
             } else if (data.candidates && data.candidates.length === 0) {
-                detailedError = "Respons AI kosong. Kemungkinan masalah konfigurasi atau filter keamanan.";
+                detailedError = 
+                "Respons AI kosong. Kemungkinan masalah konfigurasi atau filter keamanan.";
             }
 
             return {
@@ -339,7 +365,9 @@ ${linksOutput}
         }
 
     } catch (error) {
-        console.error("[Veritas Cloud Call] Kesalahan Fatal Fetch:", error);
+        console.error(
+            "[Veritas Cloud Call] Kesalahan Fatal Fetch:", error
+        );
         return {
             flag: "Error",
             message: `Kesalahan Jaringan/Fatal: ${error.message}`,
@@ -361,9 +389,15 @@ async function runFactCheckHybrid(text) {
     // --- 1. HANDLE NO API KEY / FALLBACK KE LOCAL AI (Logic Unik) ---
     if (!geminiApiKey) {
         if (isLocalAiAvailable()) {
-            console.log("[Veritas Hybrid] API Key hilang. Melakukan verifikasi menggunakan AI Lokal (On-Device).");
+            console.log(
+                "[Veritas Hybrid] API Key hilang. Melakukan verifikasi menggunakan AI Lokal (On-Device)."
+            );
 
-            const localPrompt = `Anda adalah Veritas AI, spesialis cek fakta. VERIFIKASI klaim ini: "${text}", berdasarkan pengetahuan internal Anda. Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'. Diikuti dengan alasan singkat dan jelas.`;
+            const localPrompt = 
+            `Anda adalah Veritas AI, spesialis cek fakta. 
+            VERIFIKASI klaim ini: "${text}", berdasarkan pengetahuan internal Anda. 
+            Balas dengan satu kata kunci di awal: 'FAKTA', 'MISINFORMASI', atau 'HATI-HATI'. 
+            Diikuti dengan alasan singkat dan jelas.`;
 
             const localResult = await chrome.ai.generateContent({
                 model: 'gemini-flash', 
@@ -379,7 +413,8 @@ async function runFactCheckHybrid(text) {
 
             const finalResult = {
                 flag: flag,
-                message: aiResponse + " [VERIFIKASI INI HANYA BERDASARKAN PENGETAHUAN LOKAL/INTERNAL CHROME. Mohon masukkan API Key untuk verifikasi Real-Time (Grounding).]",
+                message: aiResponse + 
+                "[VERIFIKASI INI HANYA BERDASARKAN PENGETAHUAN LOKAL/INTERNAL CHROME. Mohon masukkan API Key untuk verifikasi Real-Time (Grounding).]",
                 claim: text
             };
             
@@ -389,7 +424,7 @@ async function runFactCheckHybrid(text) {
 
         return { 
             flag: "Error", 
-            message: "API Key Gemini belum diatur. Buka Pengaturan Veritas (klik kanan ikon ekstensi > Options) dan simpan API Key kamu. (Gagal menggunakan AI Lokal/Cloud)",
+            message:"API Key Gemini belum diatur. Buka Pengaturan Veritas (klik kanan ikon ekstensi > Options) dan simpan API Key kamu. (Gagal menggunakan AI Lokal/Cloud)",
             debug: "Missing API Key & Local AI Unavailable"
         };
     }
@@ -399,9 +434,22 @@ async function runFactCheckHybrid(text) {
     const processedText = await runLocalPreProcessing(text);
     
     // Prompt yang sudah dioptimalkan
-    const prompt = `Anda adalah Veritas AI, spesialis cek fakta. Tugas Anda adalah VERIFIKASI klaim ini: "${processedText}". Gunakan Google Search untuk mendapatkan informasi real-time dan WAJIB sertakan fakta terbaru yang mendukung penilaian Anda. **Terapkan Format Keluaran Ketat ini:** (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
+    const prompt =
+    `Anda adalah Veritas AI, spesialis cek fakta. 
+    Tugas Anda adalah VERIFIKASI klaim ini: "${processedText}". 
+    Terapkan Penalaran: 
+    1) Deduktif (membandingkan klaim dengan aturan/fakta mapan); 
+    2) Triangulasi (membandingkan Minimal 3 sumber dari Google Search). 
+    WAJIB sertakan fakta terbaru yang mendukung penilaian Anda. 
+    **Terapkan Format Keluaran Ketat ini:** 
+    (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); 
+    (2) Jelaskan alasanmu dalam format Minimal TIGA POIN BUlet (-). 
+    Jika klaim deskriptif, jabarkan lebih dari 3 poin. 
+    JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`; 
     
-    console.log("[Veritas Hybrid] Mengirim prompt ke Gemini Cloud (dengan Google Search)...");
+    console.log(
+        "[Veritas Hybrid] Mengirim prompt ke Gemini Cloud (dengan Google Search)..."
+    );
     
     const contents = [{ role: "user", parts: [{ text: prompt }] }];
 
@@ -413,7 +461,9 @@ async function runFactCheckHybrid(text) {
 // ====================================================================
 
 async function urlToBase64(url) {
-    console.log("[Veritas Multimodal] Fetching image dari URL...");
+    console.log(
+        "[Veritas Multimodal] Fetching image dari URL..."
+    );
     
     const response = await fetch(url);
     
@@ -484,9 +534,22 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
     }
     
     // Prompt yang sudah dioptimalkan
-    const promptText = `Anda adalah Veritas AI, spesialis cek fakta multimodal. Bandingkan dan VERIFIKASI klaim ini: "${text}", dengan (1) gambar yang diberikan dan (2) konteks eksternal dari Google Search. WAJIB sertakan temuan yang mendukung. **Terapkan Format Keluaran Ketat ini:** (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); (2) Jelaskan alasanmu dalam format TIGA POIN BUlet (-). JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
+    const promptText = 
+    `Anda adalah Veritas AI, spesialis cek fakta multimodal. 
+    Bandingkan dan VERIFIKASI klaim ini: "${text}", dengan (1) gambar yang diberikan dan (2) konteks eksternal dari Google Search. 
+    Terapkan Penalaran: 
+    1) Deduktif (membandingkan klaim dengan aturan/fakta mapan); 
+    2) Triangulasi (membandingkan Minimal 3 sumber dari Google Search). 
+    WAJIB sertakan temuan yang mendukung. 
+    **Terapkan Format Keluaran Ketat ini:** 
+    (1) SATU KATA KUNCI di awal ('FAKTA', 'MISINFORMASI', atau 'HATI-HATI') diikuti tanda sama dengan (=); 
+    (2) Jelaskan alasanmu dalam format Minimal TIGA POIN BUlet (-). 
+    Jika klaim deskriptif, jabarkan lebih dari 3 poin. 
+    JANGAN SERTAKAN LINK APAPUN DI DALAM TEKS ALASAN.`;
 
-    console.log("[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)...");
+    console.log(
+        "[Veritas Upload] Mengirim Base64 Image dan Prompt ke Gemini Cloud (dengan Google Search)..."
+    );
 
     const contents = [
         {
