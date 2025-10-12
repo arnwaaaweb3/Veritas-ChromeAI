@@ -1,0 +1,32 @@
+{
+    "extensionName": {
+        "message": "Veritas"
+    },
+    "extensionDescription": {
+        "message": "Aplikasi cek fakta menggunakan AI terintegrasi Chrome."
+    },
+    "factCheckTab": {
+        "message": "Cek Fakta"
+    },
+    "historyTab": {
+        "message": "Riwayat"
+    },
+    "uploadSectionHeader": {
+        "message": "Cek Fakta dari Gambar Lokal:"
+    },
+    "claimInputPlaceholder": {
+        "message": "Masukkan klaim terkait gambar..."
+    },
+    "submitUploadButton": {
+        "message": "Analisis Gambar"
+    },
+    "settingsTitle": {
+        "message": "Veritas: Pengaturan API Key"
+    },
+    "settingsDesc": {
+        "message": "Masukkan Gemini Developer API Key (Cloud) kamu di bawah ini:"
+    },
+    "saveKeyButton": {
+        "message": "Simpan API Key"
+    }
+}

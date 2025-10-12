@@ -1,0 +1,32 @@
+{
+    "extensionName": {
+        "message": "Veritas"
+    },
+    "extensionDescription": {
+        "message": "Fact-checking App using Chrome's built-in AI APIs."
+    },
+    "factCheckTab": {
+        "message": "Fact Check"
+    },
+    "historyTab": {
+        "message": "History"
+    },
+    "uploadSectionHeader": {
+        "message": "Fact Check from Local Image:"
+    },
+    "claimInputPlaceholder": {
+        "message": "Enter claim related to the image..."
+    },
+    "submitUploadButton": {
+        "message": "Analyze Image"
+    },
+    "settingsTitle": {
+        "message": "Veritas: API Key Settings"
+    },
+    "settingsDesc": {
+        "message": "Enter your Gemini Developer API Key (Cloud) below:"
+    },
+    "saveKeyButton": {
+        "message": "Save API Key"
+    }
+}

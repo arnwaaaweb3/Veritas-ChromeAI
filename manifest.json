@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Veritas",
-  "version": "1.0",
+  "version": "1.0","default_locale": "en",
   "description": "Fact-checking information App using Chrome's built-in AI APIs.",
   "permissions": [
     "contextMenus",  
