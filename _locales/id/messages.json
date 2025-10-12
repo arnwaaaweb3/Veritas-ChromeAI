@@ -28,5 +28,8 @@
     },
     "saveKeyButton": {
         "message": "Simpan API Key"
+    },
+    "clearHistoryButton": {
+        "message": "Hapus Semua Riwayat"
     }
 }

@@ -28,5 +28,8 @@
     },
     "saveKeyButton": {
         "message": "Save API Key"
+    },
+    "clearHistoryButton": {
+        "message": "Clear All History"
     }
 }

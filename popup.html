@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Veritas AI</title>
+  <title>__MSG_extensionName__</title>
   <style>
     :root {
       --primary: #4285F4;
@@ -391,8 +391,8 @@
           background: #fff; 
           padding: 5px 0; 
           border-radius: var(--radius);">
-          <button id="tabFactCheck">Fact Check</button>
-          <button id="tabHistory">History</button>
+          <button id="tabFactCheck">__MSG_factCheckTab__</button>
+          <button id="tabHistory">__MSG_historyTab__</button>
         </div>
 
         <div id="tabContent">
@@ -413,16 +413,29 @@
               </div>
 
               <div id="uploadSection" style="flex-shrink: 0;">
-                  <h4>Cek Fakta dari Gambar Lokal:</h4>
-                  <textarea id="textClaimInput" placeholder="Masukkan klaim terkait gambar..."></textarea>
+                  <h4 data-i18n="uploadSectionHeader">__MSG_uploadSectionHeader__:</h4>
+                  <textarea id="textClaimInput" placeholder="__MSG_claimInputPlaceholder__"></textarea>
                   <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
-                  <button id="submitUploadButton">Analisis Gambar</button>
+                  <button id="submitUploadButton">__MSG_submitUploadButton__</button>
                   <div id="uploadStatus"></div>
               </div>
             </div>
             
             <div id="historyTab" style="display: none; padding-top: 10px;">
-              <button id="clearHistoryButton" style="width: 100%; background: var(--danger); margin-bottom: 15px; border: none; color: white; padding: 10px; border-radius: var(--radius); cursor: pointer; font-weight: 600;">Hapus Semua Riwayat</button>
+              <button id="clearHistoryButton" 
+                style=
+                  "width: 100%; 
+                  background: var(--danger); 
+                  margin-bottom: 15px; 
+                  border: none; 
+                  color: white; 
+                  padding: 10px; 
+                  border-radius: 
+                  var(--radius); 
+                  cursor: pointer; 
+                  font-weight: 600;" 
+                  data-i18n="clearHistoryButton"
+                >__MSG_clearHistoryButton__</button>
               <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
               <div id="historyList">
               </div>
