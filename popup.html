@@ -14,14 +14,14 @@
       --radius: 10px;
     }
 
-    /* V: DEKLARASI FONT BARU */
+    /* V: NEW FONT DECLARATION */
     @font-face {
       font-family: 'ParaRegular';
       src: url('src/fonts/ParaRegular.ttf') format('truetype');
       font-weight: normal;
       font-style: normal;
     }
-    /* V: AKHIR DEKLARASI FONT BARU */
+    /* V: END NEW FONT DECLARATION */
 
     /* === GLOBAL (ORIGINAL) === */
     html, body {
@@ -40,7 +40,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      /* Background SVG tetap di appContainer, jadi dia FIXED */
+      /* Background SVG fixed in appContainer */
       background: url("icons/Veritas.svg") no-repeat center top / cover; 
     }
 
@@ -83,13 +83,13 @@
 
     /* === HEADER BAR & TOP LOGO (FIXED POSITION) === */
     #topHeader {
-        position: fixed; /* Kriteria 2: FIXED POSITION */
+        position: fixed; /* Criteria 2: FIXED POSITION */
         top: 16px;
         right: 16px;
         display: flex;
         align-items: center;
         gap: 0px;
-        z-index: 30; /* Tingkatkan z-index agar pasti di atas */
+        z-index: 30; /* Increase z-index to be sure to be on top */
     }
 
     .topLogo {
@@ -120,9 +120,9 @@
 
     #mainContent.visible { opacity: 1; transform: translateY(0); }
 
-    /* === NEW RESULT CONTAINERS (Dipertahankan) === */
+    /* === NEW RESULT CONTAINERS (Kept) === */
 
-    /* Container Status Utama (Flag & Klaim) */
+    /* Main Status Container (Flag & Claim) */
     #resultHeader {
         margin-top: 0px;
         padding: 12px;
@@ -140,7 +140,7 @@
         line-height: 1;
     }
 
-    /* Container untuk Klaim (Kriteria 2) */
+    /* Container for Claim (Criteria 2) */
     #claimDisplay {
         font-style: italic;
         margin-top: 10px;
@@ -152,7 +152,7 @@
         font-size: 14px;
     }
 
-    /* Container untuk Reasoning (Kriteria 3) */
+    /* Container for Reasoning (Criteria 3) */
     #reasoningBox {
         padding: 12px;
         background-color: #ffffff;
@@ -164,7 +164,7 @@
     
     #reasoningBox p { margin: 0; font-weight: bold; }
 
-    /* List Styling untuk Reasoning */
+    /* List Styling for Reasoning */
     #reasoningBox ul {
         list-style: none;
         padding: 0;
@@ -176,7 +176,7 @@
         position: relative;
         line-height: 1.4;
     }
-    /* Poin Bulet Kustom */
+    /* Custom Bullet Point */
     #reasoningBox li::before {
         content: "•"; 
         color: var(--primary); 
@@ -187,7 +187,7 @@
     }
 
 
-    /* Container untuk Link (Kriteria 5) */
+    /* Container for Links (Criteria 5) */
     #linkBox {
         padding: 12px;
         background-color: #f7f7f7;
@@ -303,7 +303,7 @@
       text-align: center;
     }
 
-    /* === HISTORY CSS (DITAMBAHKAN) === */
+    /* === HISTORY CSS (ADDED) === */
     #historyList .history-item {
       margin-bottom: 15px;
       padding: 10px;
@@ -353,9 +353,9 @@
       padding: 6px 12px;
       cursor: pointer;
       transition: all 0.2s ease;
-      border-radius: 20px; /* Bentuk pill */
+      border-radius: 20px; /* Pill shape */
       color: #555;
-      flex-grow: 1; /* Agar membagi lebar sama rata */
+      flex-grow: 1; /* Equal width division */
     }
 
     #tabNav button.active {
@@ -372,7 +372,7 @@
     <div id="splashScreen">
       <video id="splashVideo" autoplay muted playsinline>
         <source src="icons/Veritas.mp4" type="video/mp4">
-        Browser kamu tidak mendukung video HTML5.
+        Your browser does not support HTML5 video.
       </video>
       <img src="icons/Veritas-LOGO2.svg" alt="Veritas Logo" class="logo" id="logoImg"> 
     </div>
@@ -402,7 +402,7 @@
               
               <div id="loadingState" style="display:none; margin-top: 20px;">
                   <div class="spinner"></div>
-                  <p><strong>Memverifikasi klaim...</strong></p>
+                  <p><strong>Verifying claim...</strong></p>
                   <p id="loadingClaimText" class="smallText"></p>
               </div>
 
@@ -414,16 +414,16 @@
               </div>
 
               <div id="uploadSection" style="flex-shrink: 0;">
-                  <h4>Cek Fakta dari Gambar Lokal:</h4>
-                  <textarea id="textClaimInput" placeholder="Masukkan klaim terkait gambar..."></textarea>
+                  <h4>Fact Check Local Image:</h4>
+                  <textarea id="textClaimInput" placeholder="Enter claim related to the image..."></textarea>
                   <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
-                  <button id="submitUploadButton">Analisis Gambar</button>
+                  <button id="submitUploadButton">Analyze Image</button>
                   <div id="uploadStatus"></div>
               </div>
             </div>
             
             <div id="historyTab" style="display: none; padding-top: 10px;">
-              <button id="clearHistoryButton" style="width: 100%; background: var(--danger); margin-bottom: 15px; border: none; color: white; padding: 10px; border-radius: var(--radius); cursor: pointer; font-weight: 600;">Hapus Semua Riwayat</button>
+              <button id="clearHistoryButton" style="width: 100%; background: var(--danger); margin-bottom: 15px; border: none; color: white; padding: 10px; border-radius: var(--radius); cursor: pointer; font-weight: 600;">Clear All History</button>
               <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
               <div id="historyList">
               </div>

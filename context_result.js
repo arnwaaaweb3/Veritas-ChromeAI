@@ -1,15 +1,15 @@
-// context_result.js (NEW FILE: Floating Result Panel for Context Menu)
+// context_result.js 
 
-// Fungsi untuk membuat/memperbarui panel loading/hasil
+// Function to create/update loading/result panel
 function createLoadingPanel(claim) {
-    // Cari panel yang sudah ada, jika ada, hapus untuk menghindari duplikasi
+    // Look for existing panel, if found, remove it to avoid duplication
     let panel = document.getElementById('veritas-floating-result');
     if (panel) panel.remove(); 
     
     panel = document.createElement('div');
     panel.id = 'veritas-floating-result';
     
-    // V: Style untuk Floating Panel (SESUAI PALET BARU: #0046ff & #ffffff)
+    // V: Style for Floating Panel (MATCHING NEW PALETTE: #0046ff & #ffffff)
     panel.style.cssText = `
         position: fixed; top: 10px; right: 10px; z-index: 2147483647; 
         width: 300px; padding: 15px; background: #ffffff; border: 2px solid #0046ff; 
@@ -18,43 +18,43 @@ function createLoadingPanel(claim) {
         transition: opacity 0.3s ease;
     `;
     
-    // Konten awal (Loading state)
+    // Initial content (Loading state)
     panel.innerHTML = `<span style="float: right; cursor: pointer; color: #000000; margin-top: -5px;" onclick="this.parentNode.remove()">❌</span>
-                       <strong style="color: #1800ad;">Veritas: Sedang Menganalisis...</strong>
-                       <p style="margin: 5px 0 0; font-size: 13px;">Klaim: <i>${claim}</i></p>`;
+                       <strong style="color: #1800ad;">Veritas: Analyzing...</strong>
+                       <p style="margin: 5px 0 0; font-size: 13px;">Claim: <i>${claim}</i></p>`;
     document.body.appendChild(panel);
     
-    // HAPUS TIMER 10 DETIK! Panel sekarang hanya akan hilang saat diganti dengan hasil akhir atau dihapus manual.
+    // REMOVED 10 SECOND TIMER! The panel now only disappears when replaced by the final result or manually closed.
     // setTimeout(() => { if (panel.parentNode) panel.remove(); }, 10000); 
     return panel;
 }
 
-// V: FUNGSI BARU UNTUK FORMATTING PESAN KE FLOATING PANEL
+// V: NEW FUNCTION FOR FORMATTING MESSAGE TO FLOATING PANEL
 function formatMessageForPanel(rawMessage) {
     // 1. Extract the reasoning part (everything after Reason:)
     const reasonSplit = rawMessage.split('Reason:');
     if (reasonSplit.length < 2) {
-        // Fallback jika format AI berantakan
+        // Fallback if AI format is messy
         return { 
             summary: rawMessage.substring(0, 100) + (rawMessage.length > 100 ? '...' : ''), 
-            header: 'Hasil Analisis' 
+            header: 'Analysis Result' 
         };
     }
 
     const flagClaimRaw = reasonSplit[0].trim();
     const rawReasonings = reasonSplit[1].split('Link:')[0].trim();
 
-    // 2. Extract the main header text (e.g., 🟢 FACT! atau 🔴 FALSE!)
+    // 2. Extract the main header text (e.g., 🟢 FACT! or 🔴 FALSE!)
     const headerMatch = flagClaimRaw.match(/^(.)+!/); 
-    const headerText = headerMatch ? headerMatch[0] : 'Hasil Analisis';
+    const headerText = headerMatch ? headerMatch[0] : 'Analysis Result';
 
     // 3. Extract the first reasoning point and clean up
-    let summary = 'Detail lebih lanjut di Popup...';
-    // Hanya ambil baris yang dimulai dengan bullet point '-'
+    let summary = 'More details in Popup...';
+    // Only take lines starting with the bullet point '-'
     const reasonLines = rawReasonings.split('\n').filter(line => line.startsWith('-'));
     
     if (reasonLines.length > 0) {
-        // Ambil baris pertama, hapus bullet point, dan trim
+        // Take the first line, remove the bullet point, and trim
         summary = reasonLines[0].substring(1).trim(); 
     }
     
@@ -68,13 +68,13 @@ function formatMessageForPanel(rawMessage) {
 }
 
 
-// Listener untuk menerima hasil akhir dari background.js
+// Listener to receive final results from background.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'finalResultUpdate') {
         const result = request.resultData;
         const panel = document.getElementById('veritas-floating-result') || createLoadingPanel(result.claim); 
 
-        // V: Update Warna Final Result (Hijau/Merah tetap, Neutral/Alert ganti ke Main Blue)
+        // V: Update Final Result Color 
         let color = '';
         if (result.flag === 'Hijau') { 
             color = '#34A853'; 
@@ -85,7 +85,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             panel.style.background = '#fde8e8'; 
         }
         else { 
-            // Warna untuk Kuning/Alert/Error: Main Brand Blue (#0046ff)
+            // Color for Yellow/Alert/Error: Main Brand Blue (#0046ff)
             color = '#0046ff'; 
             panel.style.background = '#ffffff'; 
         }
@@ -93,7 +93,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // V: FORMATTING FOR PANEL
         const formatted = formatMessageForPanel(result.message);
 
-        // Update panel dengan hasil akhir
+        // Update panel with final result
         panel.style.borderColor = color;
         panel.innerHTML = `<span style="float: right; cursor: pointer; color: #000000; margin-top: -5px;" onclick="this.parentNode.remove()">❌</span>
                            <strong style="color: ${color};">${formatted.header}</strong>
