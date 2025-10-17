@@ -24,14 +24,14 @@
 
     @font-face {
       font-family: 'AlteHaasGrotesk';
-      src: url('fonts/AlteHaasGroteskRegular.ttf') format('truetype');
+      src: url('src/fonts/AlteHaasGroteskRegular.ttf') format('truetype');
       font-weight: 400;
       font-style: normal;
     }
 
     @font-face {
       font-family: 'AlteHaasGrotesk';
-      src: url('fonts/AlteHaasGroteskBold.ttf') format('truetype');
+      src: url('src/fonts/AlteHaasGroteskBold.ttf') format('truetype');
       font-weight: 700;
       font-style: normal;
     }
@@ -39,12 +39,12 @@
     /* GLOBAL */
     html, body {
       width: 320px;
-      height: 480px; 
+      height: 480px;
       margin: 0;
       padding: 0;
       font-family: "ParaRegular", sans-serif;
       color: var(--text);
-      background: #fff; 
+      background: #fff;
       overflow: hidden;
     }
 
@@ -53,7 +53,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: url("icons/Veritas.svg") no-repeat center top / cover; 
+      background: url("icons/Veritas.svg") no-repeat center top / cover;
     }
 
     h4 {
@@ -76,7 +76,7 @@
       transition: opacity 0.8s ease;
       background: #fff;
       overflow: hidden;
-      z-index: 20; 
+      z-index: 20;
     }
 
     #splashScreen.fade-out {
@@ -94,16 +94,15 @@
       z-index: 1;
     }
 
-    .logo { 
-        width: 72px; 
-        height: 72px; 
-        z-index: 10; 
-        box-shadow: 0 5px 25px rgba(0,0,0,0.3); 
-        border-radius: 16px; 
-        margin-bottom: 15px; 
-        animation: logoFade 5s ease-in-out forwards; 
+    .logo {
+      width: 72px;
+      height: 72px;
+      z-index: 10;
+      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+      margin-bottom: 15px;
+      animation: logoFade 5s ease-in-out forwards;
     }
-    @keyframes logoFade { 0% { opacity: 0; transform: scale(0.95); } 25% { opacity: 1; transform: scale(1); } 75% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.05); } }
 
     @keyframes logoFade {
       0% { opacity: 0; transform: scale(0.95); }
@@ -114,19 +113,19 @@
     /* HEADER */
     #topHeader {
       position: fixed;
-        top: 16px;
-        right: 16px;
-        display: flex;
-        align-items: center;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
       gap: 0;
       z-index: 30;
     }
 
     .topLogo {
-        width: 60px;
-        height: 60px;
+      width: 60px;
+      height: 60px;
     }
-    
+
     .topText {
       height: 80px;
       opacity: 0.9;
@@ -144,7 +143,7 @@
       transform: translateY(10px);
       transition: opacity 0.8s ease, transform 0.8s ease;
       overflow-y: scroll;
-      background: rgba(255, 255, 255, 0.5); 
+      background: rgba(255, 255, 255, 0.5);
       box-sizing: border-box;
     }
 
@@ -156,109 +155,120 @@
     /* RESULT SECTIONS */
     #resultHeader {
       margin-top: 0;
-        padding: 12px;
-        border-radius: var(--radius);
+      padding: 12px;
+      border-radius: var(--radius);
       font-weight: 700;
       font-size: 20px;
       font-family: "AlteHaasGrotesk", sans-serif;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        display: flex;
-        align-items: center;
+      display: flex;
+      align-items: center;
     }
 
     .flag-symbol {
       font-size: 20px;
-        margin-right: 10px;
-        line-height: 1;
+      margin-right: 10px;
+      line-height: 1;
     }
 
-    /* Container for Claim (Criteria 2) */
     #claimDisplay {
-        font-style: italic;
+      font-style: italic;
       margin: 10px 0 15px;
-        padding: 10px;
-        background-color: var(--neutral);
-        border-radius: var(--radius);
-        border-left: 3px solid var(--primary);
-        font-size: 14px;
+      padding: 10px;
+      background-color: var(--neutral);
+      border-radius: var(--radius);
+      border-left: 3px solid var(--primary);
+      font-size: 14px;
     }
 
-    /* Container for Reasoning (Criteria 3) */
     #reasoningBox {
-        padding: 12px;
-        background-color: #ffffff;
-        border-radius: var(--radius);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        margin-bottom: 15px;
-        font-size: 13px;
+      padding: 12px;
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      margin-bottom: 15px;
+      font-size: 13px;
     }
-    
-    #reasoningBox p { margin: 0; font-weight: bold; }
 
-    /* List Styling for Reasoning */
+    #reasoningBox p {
+      margin: 0;
+      font-weight: bold;
+    }
+
     #reasoningBox ul {
-        list-style: none;
-        padding: 0;
-        margin-top: 5px;
+      list-style: none;
+      padding: 0;
+      margin-top: 5px;
     }
+
     #reasoningBox li {
-        margin-bottom: 8px;
-        padding-left: 15px;
-        position: relative;
-        line-height: 1.4;
+      margin-bottom: 8px;
+      padding-left: 15px;
+      position: relative;
+      line-height: 1.4;
     }
-    /* Custom Bullet Point */
+
     #reasoningBox li::before {
-        content: "•"; 
-        color: var(--primary); 
-        font-weight: bold;
-        display: inline-block; 
-        width: 1em;
-        margin-left: -1em;
+      content: "•";
+      color: var(--primary);
+      font-weight: bold;
+      display: inline-block;
+      width: 1em;
+      margin-left: -1em;
     }
 
-
-    /* Container for Links (Criteria 5) */
     #linkBox {
-        padding: 12px;
-        background-color: #f7f7f7;
-        border-radius: var(--radius);
-        border: 1px solid #ddd;
-        font-size: 13px;
+      padding: 12px;
+      background-color: #f7f7f7;
+      border-radius: var(--radius);
+      border: 1px solid #ddd;
+      font-size: 13px;
     }
 
-    #linkBox p { margin: 0; font-weight: bold; color: #555; } 
+    #linkBox p {
+      margin: 0;
+      font-weight: bold;
+      color: #555;
+    }
 
     #linkBox ul {
-        list-style: none; 
-        padding: 0;
-        margin-top: 5px;
+      list-style: none;
+      padding: 0;
+      margin-top: 5px;
     }
+
     #linkBox li {
-        margin-bottom: 5px;
+      margin-bottom: 5px;
     }
+
     #linkBox a {
-        word-break: break-all;
+      word-break: break-all;
     }
 
-    /* Color Scheme for Results */
-    .Merah { color: var(--danger); background-color: #fde8e8; }
-    .Hijau { color: var(--secondary); background-color: #e7f8ec; }
-    .Kuning { color: #b57f00; background-color: #fff8d6; }
-    .Error { color: #555; background-color: #f1f1f1; }
+    /* STATUS COLORS */
+    .Merah { color: var(--danger); background: #fff; }
+    .Hijau { color: var(--secondary); background: #fff; }
+    .Kuning { color: var(--warning); background: #fff; }
+    .Error { color: var(--danger); background: #fff; }
 
-    /* Loading State Styling */
+    .Default {
+      color: var(--primary);
+      background: #f0f4ff;
+      border-left: 3px solid var(--primary) !important;
+    }
+
+    /* LOADING STATE */
     #loadingState {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        border-radius: var(--radius);
-        background: rgba(240, 240, 255, 0.9);
-        color: var(--primary);
-        text-align: center;
-        margin-top: 50px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      border-radius: var(--radius);
+      background: rgba(240, 240, 255, 0.9);
+      color: var(--primary);
+      text-align: center;
+      margin-top: 50px;
     }
 
     .spinner {
@@ -282,15 +292,13 @@
       100% { transform: rotate(360deg); }
     }
 
-
-    /* === Upload Section (ORIGINAL STYLES RESTORED) === */
+    /* UPLOAD SECTION */
     #uploadSection {
       border-top: 1px solid #eee;
       margin-top: 18px;
-      padding-top: 12px;
+      padding: 12px 0;
       flex-shrink: 0;
-      background-color: rgba(255, 255, 255, 0.9); 
-      padding-bottom: 12px;
+      background: rgba(255, 255, 255, 0.9);
       border-radius: var(--radius);
     }
 
@@ -326,7 +334,7 @@
     button:hover {
       background: #3367d6;
     }
-    
+
     #uploadStatus {
       margin-top: 10px;
       font-weight: bold;
@@ -334,14 +342,14 @@
       text-align: center;
     }
 
-    /* === HISTORY CSS (ADDED) === */
+    /* HISTORY */
     #historyList .history-item {
       margin-bottom: 15px;
       padding: 10px;
       border-radius: var(--radius);
       border-left: 4px solid #aaa;
       background: #fcfcfc;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
       cursor: pointer;
       transition: background 0.2s;
     }
@@ -360,11 +368,13 @@
       color: #999;
       margin-bottom: 5px;
     }
+
     .history-claim {
       font-weight: bold;
       font-size: 14px;
       margin-bottom: 5px;
     }
+
     .history-flag {
       font-size: 12px;
       padding: 2px 6px;
@@ -373,95 +383,86 @@
       margin-top: 5px;
       display: inline-block;
     }
-    .history-flag.Hijau { background: var(--secondary); color: white; }
-    .history-flag.Merah { background: var(--danger); color: white; }
-    .history-flag.Kuning { background: var(--warning); color: white; }
 
+    .history-flag.Hijau { background: var(--secondary); color: #fff; }
+    .history-flag.Merah { background: var(--danger); color: #fff; }
+    .history-flag.Kuning { background: var(--warning); color: #fff; }
+
+    /* TAB NAV */
     #tabNav button {
       border: none;
       background: transparent;
-      font-weight: 600;
-      padding: 6px 12px;
+      font-weight: 550;
+      padding: 6px 4px;
       cursor: pointer;
       transition: all 0.2s ease;
-      border-radius: 20px; /* Pill shape */
-      color: #555;
-      flex-grow: 1; /* Equal width division */
+      border-radius: 7.5px;
+      color: var(--primary);
+      font-size: 16px;
     }
 
     #tabNav button.active {
       background: var(--primary);
-      color: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      color: #fff;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
-
   </style>
 </head>
+
 <body>
   <div id="appContainer">
-
     <div id="splashScreen">
       <video id="splashVideo" autoplay muted playsinline>
         <source src="icons/Veritas.mp4" type="video/mp4">
         Your browser does not support HTML5 video.
       </video>
-      <img src="icons/Veritas-LOGO2.svg" alt="Veritas Logo" class="logo" id="logoImg"> 
+      <img src="icons/Veritas-LOGO.svg" alt="Veritas Logo" class="logo" id="logoImg">
     </div>
 
     <div id="mainContent">
-        <div id="topHeader"> 
-            <img src="icons/Veritas-Text.svg" alt="Veritas Text" class="topText">
-            <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="topLogo">
+      <div id="topHeader">
+        <img src="icons/Veritas-Text.svg" alt="Veritas Text" class="topText">
+        <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="topLogo">
+      </div>
+
+      <div id="tabNav" style="display: flex; justify-content: space-around; margin-top: 75px; margin-bottom: 10px; flex-shrink: 0; gap: 7.5px; background: #fff; border-radius: var(--radius);">
+        <button id="tabFactCheck">Fact Check</button>
+        <button id="tabHistory">History</button>
+      </div>
+
+      <div id="tabContent">
+        <div id="factCheckTab">
+          <div id="loadingState" style="display:none; margin-top: 20px;">
+            <div class="spinner"></div>
+            <p><strong>Verifying claim...</strong></p>
+            <p id="loadingClaimText" class="smallText"></p>
+          </div>
+
+          <div id="resultOutput" style="display:none;">
+            <div id="resultHeader"></div>
+            <div id="claimDisplay"></div>
+            <div id="reasoningBox"></div>
+            <div id="linkBox"></div>
+          </div>
+
+          <div id="uploadSection">
+            <h4>Fact Check Local Image:</h4>
+            <textarea id="textClaimInput" placeholder="Enter claim related to the image..."></textarea>
+            <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
+            <button id="submitUploadButton">Analyze Image</button>
+            <div id="uploadStatus"></div>
+          </div>
         </div>
 
-        <div id="tabNav" 
-          style="display: flex; 
-          justify-content: space-around; 
-          margin-top: 55px; 
-          margin-bottom: 10px;
-          flex-shrink: 0; 
-          background: #fff; 
-          padding: 5px 0; 
-          border-radius: var(--radius);">
-          <button id="tabFactCheck">Fact Check</button>
-          <button id="tabHistory">History</button>
+        <div id="historyTab" style="display:none; padding-top: 10px;">
+          <button id="clearHistoryButton" style="width: 100%; background: var(--danger); margin-bottom: 15px; border: none; color: white; padding: 10px; border-radius: var(--radius); cursor: pointer; font-weight: 600;">Clear All History</button>
+          <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
+          <div id="historyList"></div>
         </div>
-
-        <div id="tabContent">
-            
-            <div id="factCheckTab">
-              
-              <div id="loadingState" style="display:none; margin-top: 20px;">
-                  <div class="spinner"></div>
-                  <p><strong>Verifying claim...</strong></p>
-                  <p id="loadingClaimText" class="smallText"></p>
-              </div>
-
-              <div id="resultOutput" style="display:none;">
-                  <div id="resultHeader"></div>
-                  <div id="claimDisplay"></div>
-                  <div id="reasoningBox"></div>
-                  <div id="linkBox"></div>
-              </div>
-
-              <div id="uploadSection" style="flex-shrink: 0;">
-                  <h4>Fact Check Local Image:</h4>
-                  <textarea id="textClaimInput" placeholder="Enter claim related to the image..."></textarea>
-                  <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
-                  <button id="submitUploadButton">Analyze Image</button>
-                  <div id="uploadStatus"></div>
-              </div>
-            </div>
-            
-            <div id="historyTab" style="display: none; padding-top: 10px;">
-              <button id="clearHistoryButton" style="width: 100%; background: var(--danger); margin-bottom: 15px; border: none; color: white; padding: 10px; border-radius: var(--radius); cursor: pointer; font-weight: 600;">Clear All History</button>
-              <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
-              <div id="historyList">
-              </div>
-            </div>
-        </div>
+      </div>
     </div>
   </div>
+
   <script src="popup.js"></script>
 </body>
 </html>
