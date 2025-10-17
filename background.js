@@ -1,4 +1,4 @@
-// background.js (PATCH FINAL V8: English Output Enforced)
+// background.js (CLEAN V9: Summarizer Discarded - Focusing on Stable Cloud Hybrid)
 
 // --- LOCAL AI HELPER FUNCTIONS (START) ---
 function isLocalAiAvailable() {
@@ -17,7 +17,6 @@ async function runLocalPreProcessing(claimText) {
         console.log(
             "[Veritas LocalAI] Starting local pre-processing using Prompt API."
         );
-        // KEEPING PRE-PROCESSING PROMPT IN ID (Internal only)
         const localPrompt = 
         `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi.
         Fokus pada fakta inti: "${claimText}"`;
@@ -92,9 +91,9 @@ function sendResultToPopup(result, isContextual = false) {
 
 /// Sending Chrome Notification
 function sendFactCheckNotification(claimText, isSuccess) {
-    const notificationId = 'veritas-fact-check-' + Date.now(); // Give unique ID
+    const notificationId = 'veritas-fact-check-' + Date.now(); 
     
-    chrome.notifications.create(notificationId, { // Use ID here
+    chrome.notifications.create(notificationId, { 
         type: 'basic',
         iconUrl: 'icons/veritas48.png', 
         title: isSuccess ? '✅ Fact Check Complete!' : '❌ Fact Check Failed', 
@@ -131,6 +130,9 @@ chrome.runtime.onInstalled.addListener(() => {
         title: "Veritas: Fact Check Claim + Image (Multimodal)", 
         contexts: ["image"] 
     });
+    
+    // SUMMARIZATION MENU REMOVED - Focusing on stable features.
+    
     console.log(
         "Veritas Text & Multimodal Context Menus created." 
     );
@@ -143,7 +145,11 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     
     const selectedText = info.selectionText;
+    const currentTabId = tab.id;
+
+    // SUMMARIZATION LOGIC REMOVED. Only Fact Check logic remains.
     
+    // --- HANDLE EXISTING FACT CHECK ACTIONS ---
     if (info.menuItemId === "veritasFactCheckText" || info.menuItemId === "veritasFactCheckMultimodal") {
         
         if (!selectedText || selectedText.trim().length === 0) {
@@ -153,7 +159,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         }
 
         const isTextMode = info.menuItemId === "veritasFactCheckText";
-        const currentTabId = tab.id;
 
         // 1. Set Loading status AND send to Floating Panel (context_result.js)
         const loadingResult = {
@@ -219,6 +224,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 // ====================================================================
 // FUNCTION 4: LISTENER FOR UPLOAD FROM POPUP
+// ... (Remains unchanged)
 // ====================================================================
 
 chrome.runtime.onMessage.addListener(
@@ -256,6 +262,7 @@ chrome.runtime.onMessage.addListener(
 
 // ====================================================================
 // CORE FUNCTION: GEMINI API CALL (Cloud API Core Handler)
+// ... (Remains unchanged)
 // ====================================================================
 
 async function executeGeminiCall(claim, contents) {
@@ -298,18 +305,17 @@ async function executeGeminiCall(claim, contents) {
             let flag = "Kuning"; 
             let flagSymbol = "🟡 ALERT!";
             
-            // V: PATCH V8 - CHECKING ENGLISH KEYWORDS FOR JUDGES
+            // V: CHECKING ENGLISH KEYWORDS
             if (firstLine.toUpperCase().startsWith("FACT")) {
                 flag = "Hijau";
                 flagSymbol = "🟢 FACT!";
             } else if (firstLine.toUpperCase().startsWith("MISINFORMATION")) {
                 flag = "Merah";
                 flagSymbol = "🔴 FALSE!";
-            } else if (firstLine.toUpperCase().startsWith("CAUTION")) { // ADDED CAUTION FOR BETTER MATCHING
+            } else if (firstLine.toUpperCase().startsWith("CAUTION")) {
                 flag = "Kuning";
                 flagSymbol = "🟡 CAUTION!";
             } 
-            // ELSE remains Kuning/ALERT! if none of the above match.
             
             // --- NEW FORMATTING LOGIC START ---
             
@@ -393,6 +399,7 @@ ${linksOutput}
 
 // ====================================================================
 // FUNCTION 5: RUN FACT CHECK HYBRID (TEXT ONLY) 
+// ... (Remains unchanged)
 // ====================================================================
 
 async function runFactCheckHybrid(text) {
@@ -422,7 +429,7 @@ async function runFactCheckHybrid(text) {
             const aiResponse = localResult.text.trim();
             const upperResponse = aiResponse.toUpperCase();
             let flag = "Kuning";
-            // PATCH V8 - CHECKING ENGLISH KEYWORDS FOR FALLBACK
+            // CHECKING ENGLISH KEYWORDS FOR FALLBACK
             if (upperResponse.startsWith("FACT")) { flag = "Hijau"; } 
             else if (upperResponse.startsWith("MISINFORMATION")) { flag = "Merah"; }
             else if (upperResponse.startsWith("CAUTION")) { flag = "Kuning"; }
@@ -449,7 +456,7 @@ async function runFactCheckHybrid(text) {
     
     const processedText = await runLocalPreProcessing(text);
     
-    // PATCH V8 - THE OPTIMIZED PROMPT IS NOW ENFORCED ENGLISH
+    // THE OPTIMIZED PROMPT IS NOW ENFORCED ENGLISH
     const prompt =
     `You are Veritas AI, a specialist in fact-checking. 
     Your task is to VERIFY this claim: "${processedText}". 
@@ -474,6 +481,7 @@ async function runFactCheckHybrid(text) {
 
 // ====================================================================
 // FUNCTION 6: URL TO BASE64 UTILITY (For Multimodal URL)
+// ... (Remains unchanged)
 // ====================================================================
 
 async function urlToBase64(url) {
@@ -509,6 +517,7 @@ async function urlToBase64(url) {
 
 // ====================================================================
 // FUNCTION 7: RUN FACT CHECK MULTIMODAL (via Right-Click URL)
+// ... (Remains unchanged)
 // ====================================================================
 
 async function runFactCheckMultimodalUrl(imageUrl, text) {
@@ -538,6 +547,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 
 // ====================================================================
 // FUNCTION 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 from Upload/Other Functions)
+// ... (Remains unchanged)
 // ====================================================================
 
 async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
@@ -548,13 +558,13 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
         return { flag: "Error", message: "Gemini API Key is not set. Cloud access blocked.", claim: "Multimodal Check Failed" };
     }
     
-    // PATCH V8 - THE OPTIMIZED PROMPT IS NOW ENFORCED ENGLISH
+    // THE OPTIMIZED PROMPT IS NOW ENFORCED ENGLISH
     const promptText = 
     `You are Veritas AI, a specialist in fact-checking. 
     Compare and VERIFY this claim: "${text}", with (1) the provided image and (2) external context from Google Search. 
     Apply Reasoning: 
-    1) Deductive (comparing the claim with established rules/facts); 
-    2) Triangulation (comparing at least 3 sources from Google Search). 
+    1) Deductive (membandingkan klaim dengan aturan/fakta mapan); 
+    2) Triangulasi (membandingkan Minimal 3 sumber dari Google Search). 
     You MUST include the latest findings supporting your assessment. 
     **Apply this Strict Output Format:** (1) ONE KEYWORD at the start ('FACT', 'MISINFORMATION', or 'CAUTION') followed by an equals sign (=); 
     (2) Explain your reasoning in the format of at least THREE bullet points (-). 
