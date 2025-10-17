@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Veritas AI</title>
@@ -14,16 +14,29 @@
       --radius: 10px;
     }
 
-    /* V: NEW FONT DECLARATION */
+    /* FONT DECLARATION */
     @font-face {
       font-family: 'ParaRegular';
       src: url('src/fonts/ParaRegular.ttf') format('truetype');
       font-weight: normal;
       font-style: normal;
     }
-    /* V: END NEW FONT DECLARATION */
 
-    /* === GLOBAL (ORIGINAL) === */
+    @font-face {
+      font-family: 'AlteHaasGrotesk';
+      src: url('fonts/AlteHaasGroteskRegular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+
+    @font-face {
+      font-family: 'AlteHaasGrotesk';
+      src: url('fonts/AlteHaasGroteskBold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+
+    /* GLOBAL */
     html, body {
       width: 320px;
       height: 480px; 
@@ -40,7 +53,6 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      /* Background SVG fixed in appContainer */
       background: url("icons/Veritas.svg") no-repeat center top / cover; 
     }
 
@@ -50,7 +62,7 @@
       color: var(--primary);
     }
 
-    /* === SPLASH (ORIGINAL) === */
+    /* SPLASH */
     #splashScreen {
       position: absolute;
       inset: 0;
@@ -67,8 +79,21 @@
       z-index: 20; 
     }
 
-    #splashScreen.fade-out { opacity: 0; pointer-events: none; }
-    #splashVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; } 
+    #splashScreen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #splashVideo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+
     .logo { 
         width: 72px; 
         height: 72px; 
@@ -80,16 +105,21 @@
     }
     @keyframes logoFade { 0% { opacity: 0; transform: scale(0.95); } 25% { opacity: 1; transform: scale(1); } 75% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.05); } }
 
+    @keyframes logoFade {
+      0% { opacity: 0; transform: scale(0.95); }
+      25%, 75% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.05); }
+    }
 
-    /* === HEADER BAR & TOP LOGO (FIXED POSITION) === */
+    /* HEADER */
     #topHeader {
-        position: fixed; /* Criteria 2: FIXED POSITION */
+      position: fixed;
         top: 16px;
         right: 16px;
         display: flex;
         align-items: center;
-        gap: 0px;
-        z-index: 30; /* Increase z-index to be sure to be on top */
+      gap: 0;
+      z-index: 30;
     }
 
     .topLogo {
@@ -103,7 +133,7 @@
       flex-shrink: 0;
     }
 
-    /* === MAIN CONTENT (SCROLLABLE AREA) === */
+    /* MAIN CONTENT */
     #mainContent {
       position: absolute;
       inset: 0;
@@ -113,29 +143,31 @@
       opacity: 0;
       transform: translateY(10px);
       transition: opacity 0.8s ease, transform 0.8s ease;
-      overflow-y: auto; 
+      overflow-y: scroll;
       background: rgba(255, 255, 255, 0.5); 
       box-sizing: border-box;
     }
 
-    #mainContent.visible { opacity: 1; transform: translateY(0); }
+    #mainContent.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
-    /* === NEW RESULT CONTAINERS (Kept) === */
-
-    /* Main Status Container (Flag & Claim) */
+    /* RESULT SECTIONS */
     #resultHeader {
-        margin-top: 0px;
+      margin-top: 0;
         padding: 12px;
         border-radius: var(--radius);
-        font-weight: 600;
-        font-size: 18px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      font-weight: 700;
+      font-size: 20px;
+      font-family: "AlteHaasGrotesk", sans-serif;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         display: flex;
         align-items: center;
     }
 
     .flag-symbol {
-        font-size: 24px;
+      font-size: 20px;
         margin-right: 10px;
         line-height: 1;
     }
@@ -143,8 +175,7 @@
     /* Container for Claim (Criteria 2) */
     #claimDisplay {
         font-style: italic;
-        margin-top: 10px;
-        margin-bottom: 15px;
+      margin: 10px 0 15px;
         padding: 10px;
         background-color: var(--neutral);
         border-radius: var(--radius);
