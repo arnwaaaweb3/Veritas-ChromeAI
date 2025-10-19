@@ -1,4 +1,3 @@
-// popup.js (FINAL & STABIL: Structured Reasoning Rendering + History Fixes + UX Patch 1 & 2)
 document.addEventListener('DOMContentLoaded', initializePopup);
 
 const HISTORY_KEY = 'veritasHistory'; // Declaration of HISTORY_KEY
@@ -54,7 +53,7 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
             reasonsHTML += `<li>${itemContent}</li>`;
         });
     } else {
-        reasonsHTML += `<li>(Unstructured/undetected reasoning from AI)</li>`; // <--- TRANSLATED
+        reasonsHTML += `<li>(Unstructured/undetected reasoning from AI)</li>`; 
     }
     reasonsHTML += '</ul>';
     reasonDiv.innerHTML = reasonsHTML;
@@ -78,7 +77,7 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
             linkRegex.lastIndex = 0; // Reset regex index
         });
     } else {
-        linksHTML += `<li>(No external sources detected)</li>`; // <--- TRANSLATED
+        linksHTML += `<li>(No external sources detected)</li>`; 
     }
     linksHTML += '</ul>';
     linkDiv.innerHTML = linksHTML;
@@ -100,8 +99,8 @@ function renderErrorState(flag, message) {
     // Display error message in the reasoning div so it's visible
     headerDiv.className = 'Error';
     headerDiv.innerHTML = `<span class="flag-symbol">❌</span> <span>Error Processing</span>`;
-    claimDiv.textContent = 'Fact check failed completely.'; // <--- TRANSLATED
-    reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Error Details:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`; // <--- TRANSLATED
+    claimDiv.textContent = 'Fact check failed completely.'; 
+    reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Error Details:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`; 
     linkDiv.innerHTML = '';
 }
 
@@ -118,7 +117,7 @@ function renderLoadingState(resultBox, claim) {
 
     outputDiv.style.display = 'none';
     loadingDiv.style.display = 'flex';
-    claimText.textContent = `"${claim || 'Loading claim data...'}"`; // <--- TRANSLATED
+    claimText.textContent = `"${claim || 'Loading claim data...'}"`; 
 }
 
 
@@ -166,9 +165,9 @@ function getFactCheckResult() {
     document.getElementById('loadingState').style.display = 'none';
     resultOutputDiv.style.display = 'block';
     document.getElementById('resultHeader').className = 'Default';
-    document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol">💡</span> <span>Ready</span>`;
-    document.getElementById('claimDisplay').textContent = 'Ready for a New Fact Check.'; // <--- TRANSLATED
-    document.getElementById('reasoningBox').innerHTML = `<p>Instructions:</p><ul><li>Highlight text & right-click (Fact Check Text/Image).</li><li>Or, use the upload feature below.</li></ul>`; // <--- TRANSLATED
+    document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol">💡</span> <span>Ready to Verify!</span>`;
+    document.getElementById('claimDisplay').textContent = 'Ready for a New Fact Check.'; 
+    document.getElementById('reasoningBox').innerHTML = `<p>Instructions:</p><ul><li>Highlight text & right-click (Fact Check Text/Image).</li><li>Or, use the upload feature below.</li></ul>`; 
     document.getElementById('linkBox').innerHTML = '';
     
   });
@@ -179,16 +178,18 @@ function getFactCheckResult() {
 function switchTab(tabName) {
     const factCheckTab = document.getElementById('factCheckTab');
     const historyTab = document.getElementById('historyTab');
-    const tabFCButton = document.getElementById('tabFactCheck');
-    const tabHButton = document.getElementById('tabHistory');
+    // Ambil elemen tab baru
+    const tabFCButton = document.getElementById('tabFactCheck'); 
+    const tabHButton = document.getElementById('tabHistory'); 
 
     if (tabName === 'history') {
         factCheckTab.style.display = 'none';
         historyTab.style.display = 'block';
         
         // --- Style Changes Here ---
-        tabFCButton.classList.remove('active');
-        tabHButton.classList.add('active');
+        // Toggle class 'active' untuk visualisasi gambar (hactive.png)
+        if (tabFCButton) tabFCButton.classList.remove('active');
+        if (tabHButton) tabHButton.classList.add('active');
         // --- End Style Changes ---
         
         renderHistory();
@@ -198,8 +199,9 @@ function switchTab(tabName) {
         historyTab.style.display = 'none';
         
         // --- Style Changes Here ---
-        tabHButton.classList.remove('active');
-        tabFCButton.classList.add('active');
+        // Toggle class 'active' untuk visualisasi gambar (fcactive.png)
+        if (tabHButton) tabHButton.classList.remove('active');
+        if (tabFCButton) tabFCButton.classList.add('active');
         // --- End Style Changes ---
     }
 }
@@ -209,14 +211,14 @@ async function renderHistory() {
     const status = document.getElementById('historyStatus');
 
     historyList.innerHTML = '';
-    status.textContent = 'Loading history...'; // <--- TRANSLATED
+    status.textContent = 'Loading history...'; 
     status.style.display = 'block';
 
     const storage = await chrome.storage.local.get([HISTORY_KEY]);
     const history = storage[HISTORY_KEY] || [];
 
     if (history.length === 0) {
-        status.textContent = 'No fact check history yet.'; // <--- TRANSLATED
+        status.textContent = 'No fact check history yet.'; 
         return;
     }
 
@@ -255,7 +257,7 @@ async function renderHistory() {
 
 // SNIPPET 4C: clearHistory function in popup.js
 async function clearHistory() {
-    if (confirm("Are you sure you want to delete ALL fact check history? This action cannot be undone.")) { // <--- TRANSLATED
+    if (confirm("Are you sure you want to delete ALL fact check history? This action cannot be undone.")) { 
         
         // Delete History array from local storage
         chrome.storage.local.remove(HISTORY_KEY, () => {
@@ -264,7 +266,7 @@ async function clearHistory() {
             
             // Notify the user
             const status = document.getElementById('historyStatus');
-            status.textContent = '✅ All history successfully deleted!'; // <--- TRANSLATED
+            status.textContent = '✅ All history successfully deleted!'; 
             status.style.display = 'block';
         });
     }
@@ -272,7 +274,7 @@ async function clearHistory() {
 // --- HISTORY LOGIC (END) ---
 
 
-// --- INITIALIZATION (FIXED) ---
+// --- INITIALIZATION (UPDATED LISTENER) ---
 
 function initializePopup() {
   const splash = document.getElementById('splashScreen');
@@ -305,7 +307,6 @@ function initializePopup() {
 
       getFactCheckResult();
       setupUploadListener();
-      // Tab initialization moved outside
     } else {
       // V: This is the first manual run. Set flag so it doesn't appear again
       chrome.storage.local.set({ 'hasSeenSplash': true }); 
@@ -316,40 +317,37 @@ function initializePopup() {
         video.play();
       }
 
-      setTimeout(() => {
+      const endSplashAndInit = () => {
         if (splash) splash.classList.add('fade-out');
         setTimeout(() => {
           if (splash) splash.style.display = 'none';
           if (main) main.classList.add('visible');
           getFactCheckResult();
           setupUploadListener();
-          // Tab initialization moved outside
         }, fadeOutTime);
+      };
+
+      setTimeout(() => {
+        // Fallback timer. Cek apakah splash sudah disembunyikan oleh video.addEventListener
+        if (splash && splash.style.display !== 'none' && !splash.classList.contains('fade-out')) {
+            endSplashAndInit();
+        }
       }, splashDuration);
 
       if (video) {
-        video.addEventListener('ended', () => {
-          if (splash && splash.style.display !== 'none') {
-            splash.classList.add('fade-out');
-            setTimeout(() => {
-              splash.style.display = 'none';
-              main.classList.add('visible');
-              getFactCheckResult();
-              setupUploadListener();
-              // Tab initialization moved outside
-            }, fadeOutTime);
-          }
-        });
+        video.addEventListener('ended', endSplashAndInit);
       }
     }
     
-    // FIX KRITIS BUG #2: Tab button initialization moved outside conditional
+    // 💡 LISTENER TAB BARU: Dijalankan setelah semua inisialisasi selesai
+    // Ini menghubungkan elemen tab Fact Check dan History ke logika switchTab
     document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
     document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
-    switchTab('factCheck'); // Set default tab
+    switchTab('factCheck'); // Atur default tab saat popup dibuka
+    
   });
 
-  // SNIPPET 4B: Listener in popup.js
+  // Listener clear history tetap aktif
   document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 
 }
@@ -370,13 +368,13 @@ function setupUploadListener() {
     const textClaim = textInput.value.trim();
 
     if (!file) {
-      uploadStatus.textContent = '❌ Please select an image file first.'; // <--- TRANSLATED
+      uploadStatus.textContent = '❌ Please select an image file first.'; 
       uploadStatus.style.color = 'red';
       return;
     }
 
     if (textClaim.length < 5) {
-      uploadStatus.textContent = '❌ Claim text is mandatory (minimum 5 characters).'; // <--- TRANSLATED
+      uploadStatus.textContent = '❌ Claim text is mandatory (minimum 5 characters).'; 
       uploadStatus.style.color = 'red';
       return;
     }
@@ -385,14 +383,14 @@ function setupUploadListener() {
     fileInput.disabled = true;
     textInput.disabled = true;
 
-    uploadStatus.textContent = '⏳ Converting image...'; // <--- TRANSLATED
+    uploadStatus.textContent = '⏳ Converting image...'; 
     uploadStatus.style.color = 'blue';
 
     try {
       const base64Data = await readFileAsBase64(file);
       const mimeType = file.type;
 
-      uploadStatus.textContent = '⏳ Sending to Gemini... (Check the results column above)'; // <--- TRANSLATED
+      uploadStatus.textContent = '⏳ Sending to Gemini... (Check the results column above)'; 
 
       chrome.runtime.sendMessage({
         action: 'multimodalUpload',
@@ -406,10 +404,10 @@ function setupUploadListener() {
         uploadStatus.textContent = ''; 
 
         if (response && response.success) {
-            uploadStatus.textContent = '✅ Analysis Complete!'; // <--- TRANSLATED
+            uploadStatus.textContent = '✅ Analysis Complete!'; 
             uploadStatus.style.color = 'green';
         } else {
-            uploadStatus.textContent = '❌ Analysis Failed (Check the results column above)'; // <--- TRANSLATED
+            uploadStatus.textContent = '❌ Analysis Failed (Check the results column above)'; 
             uploadStatus.style.color = 'red';
         }
       });
@@ -420,11 +418,11 @@ function setupUploadListener() {
       chrome.storage.local.set({ 'lastFactCheckResult': 
         { flag: 'loading', 
           claim: textClaim, 
-          message: 'Veritas is verifying this claim...' } // <--- TRANSLATED
+          message: 'Veritas is verifying this claim...' } 
       });
 
     } catch (error) {
-      uploadStatus.textContent = `❌ Failed: ${error.message}`; // <--- TRANSLATED
+      uploadStatus.textContent = `❌ Failed: ${error.message}`; 
       uploadStatus.style.color = 'red';
       submitButton.disabled = false;
       fileInput.disabled = false;

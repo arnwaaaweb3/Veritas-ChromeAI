@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Veritas AI</title>
@@ -14,7 +15,7 @@
       --radius: 10px;
     }
 
-    /* FONT DECLARATION */
+    /* FONT DECLARATION (Asumsi path sudah benar: fonts/*.ttf) */
     @font-face {
       font-family: 'ParaRegular';
       src: url('fonts/ParaRegular.ttf') format('truetype');
@@ -37,7 +38,8 @@
     }
 
     /* GLOBAL */
-    html, body {
+    html,
+    body {
       width: 320px;
       height: 480px;
       margin: 0;
@@ -105,9 +107,21 @@
     }
 
     @keyframes logoFade {
-      0% { opacity: 0; transform: scale(0.95); }
-      25%, 75% { opacity: 1; transform: scale(1); }
-      100% { opacity: 0; transform: scale(1.05); }
+      0% {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      25%,
+      75% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(1.05);
+      }
     }
 
     /* HEADER */
@@ -158,11 +172,34 @@
       padding: 12px;
       border-radius: var(--radius);
       font-weight: 700;
-      font-size: 20px;
-      font-family: "AlteHaasGrotesk", sans-serif;
+      font-size: 18px;
+      font-family: 'AlteHaasGrotesk';
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       display: flex;
       align-items: center;
+
+      /* REVISI STYLE BERDASARKAN PERMINTAAN NAWA */
+      background: #FFFFFF;
+      border: 2px solid #1800ad;
+      /* Tambah outline/border warna biru tua */
+    }
+
+    /* Dan kita buat kelas status LEBIH SPESIFIK: */
+    #resultHeader.Hijau {
+      color: var(--secondary);
+      /* Warna teks header jadi hijau */
+      border-color: var(--secondary);
+      /* Border-nya ikut warna hijau */
+    }
+
+    #resultHeader.Kuning {
+      color: var(--warning);
+      border-color: var(--warning);
+    }
+
+    #resultHeader.Merah {
+      color: var(--danger);
+      border-color: var(--danger);
     }
 
     .flag-symbol {
@@ -246,15 +283,29 @@
     }
 
     /* STATUS COLORS */
-    .Merah { color: var(--danger); background: #fff; }
-    .Hijau { color: var(--secondary); background: #fff; }
-    .Kuning { color: var(--warning); background: #fff; }
-    .Error { color: var(--danger); background: #fff; }
+    .Merah {
+      color: var(--danger);
+      background: #fff;
+    }
+
+    .Hijau {
+      color: var(--secondary);
+      background: #fff;
+    }
+
+    .Kuning {
+      color: var(--warning);
+      background: #fff;
+    }
+
+    .Error {
+      color: var(--danger);
+      background: #fff;
+    }
 
     .Default {
       color: var(--primary);
       background: #f0f4ff;
-      border-left: 3px solid var(--primary) !important;
     }
 
     /* LOADING STATE */
@@ -288,8 +339,13 @@
     }
 
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
 
     /* UPLOAD SECTION */
@@ -319,22 +375,6 @@
       margin-bottom: 10px;
     }
 
-    button {
-      background: var(--primary);
-      border: none;
-      color: #fff;
-      font-weight: 600;
-      border-radius: var(--radius);
-      width: 100%;
-      padding: 10px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    button:hover {
-      background: #3367d6;
-    }
-
     #uploadStatus {
       margin-top: 10px;
       font-weight: bold;
@@ -342,69 +382,125 @@
       text-align: center;
     }
 
-    /* HISTORY */
-    #historyList .history-item {
-      margin-bottom: 15px;
-      padding: 10px;
-      border-radius: var(--radius);
-      border-left: 4px solid #aaa;
-      background: #fcfcfc;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    #historyList .history-item:hover {
-      background: #f0f0f0;
-    }
-
-    #historyList .history-item.Hijau { border-left-color: var(--secondary); }
-    #historyList .history-item.Merah { border-left-color: var(--danger); }
-    #historyList .history-item.Kuning { border-left-color: var(--warning); }
-
-    .history-timestamp {
-      display: block;
-      font-size: 10px;
-      color: #999;
-      margin-bottom: 5px;
-    }
-
-    .history-claim {
-      font-weight: bold;
-      font-size: 14px;
-      margin-bottom: 5px;
-    }
-
-    .history-flag {
-      font-size: 12px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: bold;
-      margin-top: 5px;
-      display: inline-block;
-    }
-
-    .history-flag.Hijau { background: var(--secondary); color: #fff; }
-    .history-flag.Merah { background: var(--danger); color: #fff; }
-    .history-flag.Kuning { background: var(--warning); color: #fff; }
-
-    /* TAB NAV */
-    #tabNav button {
+    /* =================================================== */
+    /* GLOBAL BUTTONS (RESET & SPESIFIKASI) */
+    /* =================================================== */
+    button {
+      /* RESET DASAR UNTUK SEMUA TOMBOL (Termasuk Tab Nav dan Upload) */
       border: none;
-      background: transparent;
-      font-weight: 550;
-      padding: 6px 4px;
+      font-weight: 600;
+      border-radius: var(--radius);
       cursor: pointer;
       transition: all 0.2s ease;
-      border-radius: 7.5px;
-      color: var(--primary);
-      font-size: 16px;
+      background: none;
+      /* PENTING: Netralisasi background default browser */
     }
 
-    #tabNav button.active {
+    /* UPLOAD & CLEAR HISTORY BUTTONS (STYLE SPESIFIK) */
+    #uploadSection button,
+    #historyTab button {
+      /* Mengaplikasikan style visual untuk tombol yang BUKAN tab nav */
       background: var(--primary);
       color: #fff;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      padding: 10px;
+    }
+
+    #uploadSection button:hover {
+      background: #3367d6;
+    }
+
+    /* CLEAR HISTORY BUTTON (OVERRIDE WARNA MERAH) */
+    #clearHistoryButton {
+      background: var(--danger) !important;
+    }
+
+    #clearHistoryButton:hover {
+      background: #c33a2d !important;
+    }
+
+    /* =================================================== */
+    /* TAB NAVIGATION (Image-Based) - LOGIC FIX */
+    /* =================================================== */
+
+    #tabNav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+
+      /* FIX SPACING DARI HEADER */
+      margin-top: 85px;
+      margin-bottom: 10px;
+
+      background: transparent;
+      border-radius: var(--radius);
+      overflow: visible;
+      z-index: 5;
+    }
+
+    /* BUTTON IMAGE STYLE */
+    #tabNav button {
+      border: none;
+      padding: 0;
+      background: none;
+      cursor: pointer;
+
+      width: 48%;
+      height: 50px;
+      min-width: 120px;
+
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transition: background-image 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+
+      font-size: 0;
+      line-height: 0;
+      display: inline-block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      background-color: transparent;
+      position: relative;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* FIX LOGIC: Mengatasi tombol 'hilang' saat unactive (default) */
+    /* ------------------------------------------------------------------ */
+
+    /* 1. KONDISI DEFAULT AWAL (misal: Fact Check AKTIF) */
+    /* Fact Check (ACTIVE) */
+    #tabFactCheck.active {
+      background-image: url('icons/fcactive.png');
+    }
+
+    /* History (UNACTIVE/DEFAULT) - INI FIX-nya! */
+    #tabHistory:not(.active) {
+      background-image: url('icons/hdefault.png');
+    }
+
+    /* 2. KONDISI KETIKA HISTORY AKTIF */
+    /* Fact Check (UNACTIVE/DEFAULT) - INI FIX-nya! */
+    #tabFactCheck:not(.active) {
+      background-image: url('icons/fcdefault.png');
+    }
+
+    /* History (ACTIVE) */
+    #tabHistory.active {
+      background-image: url('icons/hactive.png');
+    }
+
+    /* 3. KONDISI HOVER (Hanya berlaku untuk tombol yang TIDAK aktif) */
+
+    /* Fact Check HOVER (saat unactive) */
+    #tabFactCheck:not(.active):hover {
+      background-image: url('icons/fchover.png');
+    }
+
+    /* History HOVER (saat unactive) */
+    #tabHistory:not(.active):hover {
+      background-image: url('icons/hhover.png');
     }
   </style>
 </head>
@@ -416,7 +512,7 @@
         <source src="icons/Veritas.mp4" type="video/mp4">
         Your browser does not support HTML5 video.
       </video>
-      <img src="icons/Veritas-LOGO.svg" alt="Veritas Logo" class="logo" id="logoImg">
+      <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="logo" id="logoImg">
     </div>
 
     <div id="mainContent">
@@ -425,9 +521,9 @@
         <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="topLogo">
       </div>
 
-      <div id="tabNav" style="display: flex; justify-content: space-around; margin-top: 75px; margin-bottom: 10px; flex-shrink: 0; gap: 7.5px; background: #fff; border-radius: var(--radius);">
-        <button id="tabFactCheck">Fact Check</button>
-        <button id="tabHistory">History</button>
+      <div id="tabNav">
+        <button id="tabFactCheck" class="active"></button>
+        <button id="tabHistory"></button>
       </div>
 
       <div id="tabContent">
@@ -455,7 +551,7 @@
         </div>
 
         <div id="historyTab" style="display:none; padding-top: 10px;">
-          <button id="clearHistoryButton" style="width: 100%; background: var(--danger); margin-bottom: 15px; border: none; color: white; padding: 10px; border-radius: var(--radius); cursor: pointer; font-weight: 600;">Clear All History</button>
+          <button id="clearHistoryButton">Clear All History</button>
           <p id="historyStatus" style="text-align: center; color: #555;">Loading history...</p>
           <div id="historyList"></div>
         </div>
@@ -465,4 +561,5 @@
 
   <script src="popup.js"></script>
 </body>
+
 </html>
