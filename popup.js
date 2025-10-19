@@ -32,13 +32,18 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const rawLinks = (linkSplit.length > 1) ? linkSplit[1].trim() : "";
     
     // 1. Render Header and Claim
-    const firstLineMatch = flagClaimRaw.match(/^(.)+!/); // Get the first line (Flag Symbol + Text)
-    const claimMatch = flagClaimRaw.match(/\*\*(.*?)\*\*/); // Get the claim between **
+    // Mengambil teks status murni dari AI (misalnya "✅ FAKTA TERVERIFIKASI!")
+    const firstLineMatch = flagClaimRaw.match(/^(.)+!/); 
+    const claimMatch = flagClaimRaw.match(/\*\*(.*?)\*\*/); 
     
     const headerText = firstLineMatch ? firstLineMatch[0] : `[${result.flag}] ${claimText}`;
 
-    headerDiv.className = result.flag;
-    headerDiv.innerHTML = `<span class="flag-symbol">${headerText.split(' ')[0]}</span> <span>${headerText.split(' ').slice(1).join(' ')}</span>`;
+    // MORTA EDIT: MENGHAPUS SIMBOL DI SINI, GANTIKAN DENGAN LOGIKA ICON BARU
+    const displayStatusText = headerText.split(' ').slice(1).join(' '); // Ambil teks setelah simbol
+    
+    headerDiv.className = result.flag; 
+    // Ikon sekarang diatur via CSS background-image pada .flag-symbol, jadi isinya dikosongkan.
+    headerDiv.innerHTML = `<span class="flag-symbol" aria-label="${result.flag}"></span> <span>${displayStatusText}</span>`;
     claimDiv.textContent = claimMatch ? claimMatch[1] : claimText;
     
     // 2. Render Reasonings (Convert Markdown List to HTML List)
@@ -96,9 +101,9 @@ function renderErrorState(flag, message) {
     const reasonDiv = document.getElementById('reasoningBox');
     const linkDiv = document.getElementById('linkBox');
     
-    // Display error message in the reasoning div so it's visible
+    // MORTA EDIT: Menggunakan Error status dan ikon error.svg
     headerDiv.className = 'Error';
-    headerDiv.innerHTML = `<span class="flag-symbol">❌</span> <span>Error Processing</span>`;
+    headerDiv.innerHTML = `<span class="flag-symbol" aria-label="Error"></span> <span>Error Processing</span>`;
     claimDiv.textContent = 'Fact check failed completely.'; 
     reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Error Details:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`; 
     linkDiv.innerHTML = '';
@@ -123,54 +128,55 @@ function renderLoadingState(resultBox, claim) {
 
 // ✅ Main listener for result updates from background (used for live updates while loading)
 function handleLiveResultUpdate(request, sender, sendResponse) {
-  if (request.action === 'updateFinalResult' || request.action === 'displayResult' || request.action === 'finalResultUpdate') {
-    const resultOutputDiv = document.getElementById('resultOutput');
+    if (request.action === 'updateFinalResult' || request.action === 'displayResult' || request.action === 'finalResultUpdate') {
+        const resultOutputDiv = document.getElementById('resultOutput');
 
-    const { flag, message, claim } = request.resultData;
-    
-    if (flag === 'loading') {
-      renderLoadingState(resultOutputDiv, claim);
-      return;
+        const { flag, message, claim } = request.resultData;
+        
+        if (flag === 'loading') {
+            renderLoadingState(resultOutputDiv, claim);
+            return;
+        }
+
+        parseAndRenderResult(request.resultData, claim, resultOutputDiv);
     }
-
-    parseAndRenderResult(request.resultData, claim, resultOutputDiv);
-  }
 }
 
 // ✅ Get result from storage (e.g., when popup is newly opened)
 function getFactCheckResult() {
-  const resultOutputDiv = document.getElementById('resultOutput');
-  
-  chrome.storage.local.get(['lastFactCheckResult'], (storage) => {
-    const result = storage.lastFactCheckResult;
-
-    // V: PATCH 2.6: Auto-Paste Highlighted Claim
-    const textClaimInput = document.getElementById('textClaimInput');
-    if (result && result.claim && textClaimInput && textClaimInput.value.trim() === '') {
-        // Only auto-paste if the input is empty
-        textClaimInput.value = result.claim;
-    }
-
-    if (result && result.flag === 'loading') {
-      renderLoadingState(resultOutputDiv, result.claim);
-      return;
-    }
-
-    if (result && result.message) {
-      parseAndRenderResult(result, result.claim, resultOutputDiv);
-      return;
-    } 
-
-    // Default state if no result
-    document.getElementById('loadingState').style.display = 'none';
-    resultOutputDiv.style.display = 'block';
-    document.getElementById('resultHeader').className = 'Default';
-    document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol">💡</span> <span>Ready to Verify!</span>`;
-    document.getElementById('claimDisplay').textContent = 'Ready for a New Fact Check.'; 
-    document.getElementById('reasoningBox').innerHTML = `<p>Instructions:</p><ul><li>Highlight text & right-click (Fact Check Text/Image).</li><li>Or, use the upload feature below.</li></ul>`; 
-    document.getElementById('linkBox').innerHTML = '';
+    const resultOutputDiv = document.getElementById('resultOutput');
     
-  });
+    chrome.storage.local.get(['lastFactCheckResult'], (storage) => {
+        const result = storage.lastFactCheckResult;
+
+        // V: PATCH 2.6: Auto-Paste Highlighted Claim
+        const textClaimInput = document.getElementById('textClaimInput');
+        if (result && result.claim && textClaimInput && textClaimInput.value.trim() === '') {
+            // Only auto-paste if the input is empty
+            textClaimInput.value = result.claim;
+        }
+
+        if (result && result.flag === 'loading') {
+            renderLoadingState(resultOutputDiv, result.claim);
+            return;
+        }
+
+        if (result && result.message) {
+            parseAndRenderResult(result, result.claim, resultOutputDiv);
+            return;
+        } 
+
+        // Default state if no result
+        document.getElementById('loadingState').style.display = 'none';
+        resultOutputDiv.style.display = 'block';
+        // MORTA EDIT: Menggunakan Default status dan ikon true.svg untuk 'Ready to Verify'
+        document.getElementById('resultHeader').className = 'Default';
+        document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol" aria-label="Default"></span> <span>Ready to Verify!</span>`; 
+        document.getElementById('claimDisplay').textContent = 'Ready for a New Fact Check.'; 
+        document.getElementById('reasoningBox').innerHTML = `<p>Instructions:</p><ul><li>Highlight text & right-click (Fact Check Text/Image).</li><li>Or, use the upload feature below.</li></ul>`; 
+        document.getElementById('linkBox').innerHTML = '';
+        
+    });
 }
 
 // --- HISTORY LOGIC (START) ---
@@ -232,12 +238,13 @@ async function renderHistory() {
         const summary = item.message.split('Reason:')[0].replace(/\*\*(.*?)\*\*/, '').trim().substring(0, 100) + '...';
 
         const date = new Date(item.timestamp).toLocaleString();
-
+        
+        // MORTA EDIT: Mengganti teks flag dengan span kosong agar ikon history-flag bisa muncul
         itemDiv.innerHTML = `
             <span class="history-timestamp">${date}</span>
             <div class="history-claim">${item.claim.substring(0, 50)}...</div>
             <div style="font-size: 12px; color: #444;">${summary}</div>
-            <span class="history-flag ${item.flag}">${item.flag.toUpperCase()}</span>
+            <span class="history-flag ${item.flag}"><span class="flag-symbol" aria-label="${item.flag}"></span> ${item.flag.toUpperCase()}</span>
         `;
         
         // Event listener to reload item from history to Fact Check tab
@@ -252,7 +259,7 @@ async function renderHistory() {
 
         historyList.appendChild(itemDiv);
     });
-  
+    
 }
 
 // SNIPPET 4C: clearHistory function in popup.js
@@ -277,78 +284,78 @@ async function clearHistory() {
 // --- INITIALIZATION (UPDATED LISTENER) ---
 
 function initializePopup() {
-  const splash = document.getElementById('splashScreen');
-  const main = document.getElementById('mainContent');
-  const video = document.getElementById('splashVideo');
+    const splash = document.getElementById('splashScreen');
+    const main = document.getElementById('mainContent');
+    const video = document.getElementById('splashVideo');
 
-  const splashDuration = 5000;
-  const fadeOutTime = 500;
+    const splashDuration = 5000;
+    const fadeOutTime = 500;
 
-  chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
+    chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
 
-  // V: Get 2 flags: isContextualCheck (from right-click) and hasSeenSplash (from manual open)
-  chrome.storage.local.get(['isContextualCheck', 'hasSeenSplash'], (storage) => {
-    const isContextualCheck = storage.isContextualCheck;
-    const hasSeenSplash = storage.hasSeenSplash;
-    
-    // Remove contextual check flag after retrieving
-    if (isContextualCheck) {
-        chrome.storage.local.remove('isContextualCheck');
-    }
-
-    // Determine if Splash should be bypassed (already seen OR opened from Contextual Check)
-    const shouldBypassSplash = isContextualCheck || hasSeenSplash;
-
-
-    if (shouldBypassSplash) {
-      if (video) video.pause();
-      if (splash) splash.style.display = 'none';
-      if (main) main.classList.add('visible');
-
-      getFactCheckResult();
-      setupUploadListener();
-    } else {
-      // V: This is the first manual run. Set flag so it doesn't appear again
-      chrome.storage.local.set({ 'hasSeenSplash': true }); 
+    // V: Get 2 flags: isContextualCheck (from right-click) and hasSeenSplash (from manual open)
+    chrome.storage.local.get(['isContextualCheck', 'hasSeenSplash'], (storage) => {
+        const isContextualCheck = storage.isContextualCheck;
+        const hasSeenSplash = storage.hasSeenSplash;
         
-      if (video) {
-        video.pause();
-        video.currentTime = 0;
-        video.play();
-      }
-
-      const endSplashAndInit = () => {
-        if (splash) splash.classList.add('fade-out');
-        setTimeout(() => {
-          if (splash) splash.style.display = 'none';
-          if (main) main.classList.add('visible');
-          getFactCheckResult();
-          setupUploadListener();
-        }, fadeOutTime);
-      };
-
-      setTimeout(() => {
-        // Fallback timer. Cek apakah splash sudah disembunyikan oleh video.addEventListener
-        if (splash && splash.style.display !== 'none' && !splash.classList.contains('fade-out')) {
-            endSplashAndInit();
+        // Remove contextual check flag after retrieving
+        if (isContextualCheck) {
+            chrome.storage.local.remove('isContextualCheck');
         }
-      }, splashDuration);
 
-      if (video) {
-        video.addEventListener('ended', endSplashAndInit);
-      }
-    }
-    
-    // 💡 LISTENER TAB BARU: Dijalankan setelah semua inisialisasi selesai
-    // Ini menghubungkan elemen tab Fact Check dan History ke logika switchTab
-    document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
-    document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
-    switchTab('factCheck'); // Atur default tab saat popup dibuka
-    
-  });
+        // Determine if Splash should be bypassed (already seen OR opened from Contextual Check)
+        const shouldBypassSplash = isContextualCheck || hasSeenSplash;
 
-  // Listener clear history tetap aktif
-  document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
+
+        if (shouldBypassSplash) {
+            if (video) video.pause();
+            if (splash) splash.style.display = 'none';
+            if (main) main.classList.add('visible');
+
+            getFactCheckResult();
+            setupUploadListener();
+        } else {
+            // V: This is the first manual run. Set flag so it doesn't appear again
+            chrome.storage.local.set({ 'hasSeenSplash': true }); 
+            
+            if (video) {
+                video.pause();
+                video.currentTime = 0;
+                video.play();
+            }
+
+            const endSplashAndInit = () => {
+                if (splash) splash.classList.add('fade-out');
+                setTimeout(() => {
+                    if (splash) splash.style.display = 'none';
+                    if (main) main.classList.add('visible');
+                    getFactCheckResult();
+                    setupUploadListener();
+                }, fadeOutTime);
+            };
+
+            setTimeout(() => {
+                // Fallback timer. Cek apakah splash sudah disembunyikan oleh video.addEventListener
+                if (splash && splash.style.display !== 'none' && !splash.classList.contains('fade-out')) {
+                    endSplashAndInit();
+                }
+            }, splashDuration);
+
+            if (video) {
+                video.addEventListener('ended', endSplashAndInit);
+            }
+        }
+        
+        // 💡 LISTENER TAB BARU: Dijalankan setelah semua inisialisasi selesai
+        // Ini menghubungkan elemen tab Fact Check dan History ke logika switchTab
+        document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
+        document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
+        switchTab('factCheck'); // Atur default tab saat popup dibuka
+        
+    });
+
+    // Listener clear history tetap aktif
+    document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 
 }
 
@@ -356,86 +363,86 @@ function initializePopup() {
 // --- UPLOAD HANDLER (No Significant Change) ---
 
 function setupUploadListener() {
-  const fileInput = document.getElementById('imageFileInput');
-  const textInput = document.getElementById('textClaimInput');
-  const uploadStatus = document.getElementById('uploadStatus');
-  const submitButton = document.getElementById('submitUploadButton');
+    const fileInput = document.getElementById('imageFileInput');
+    const textInput = document.getElementById('textClaimInput');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const submitButton = document.getElementById('submitUploadButton');
 
-  if (!submitButton) return;
+    if (!submitButton) return;
 
-  submitButton.addEventListener('click', async () => {
-    const file = fileInput.files[0];
-    const textClaim = textInput.value.trim();
+    submitButton.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        const textClaim = textInput.value.trim();
 
-    if (!file) {
-      uploadStatus.textContent = '❌ Please select an image file first.'; 
-      uploadStatus.style.color = 'red';
-      return;
-    }
-
-    if (textClaim.length < 5) {
-      uploadStatus.textContent = '❌ Claim text is mandatory (minimum 5 characters).'; 
-      uploadStatus.style.color = 'red';
-      return;
-    }
-
-    submitButton.disabled = true;
-    fileInput.disabled = true;
-    textInput.disabled = true;
-
-    uploadStatus.textContent = '⏳ Converting image...'; 
-    uploadStatus.style.color = 'blue';
-
-    try {
-      const base64Data = await readFileAsBase64(file);
-      const mimeType = file.type;
-
-      uploadStatus.textContent = '⏳ Sending to Gemini... (Check the results column above)'; 
-
-      chrome.runtime.sendMessage({
-        action: 'multimodalUpload',
-        base64: base64Data.split(',')[1],
-        mimeType: mimeType,
-        claim: textClaim
-      }, (response) => {
-        submitButton.disabled = false;
-        fileInput.disabled = false;
-        textInput.disabled = false;
-        uploadStatus.textContent = ''; 
-
-        if (response && response.success) {
-            uploadStatus.textContent = '✅ Analysis Complete!'; 
-            uploadStatus.style.color = 'green';
-        } else {
-            uploadStatus.textContent = '❌ Analysis Failed (Check the results column above)'; 
+        if (!file) {
+            uploadStatus.textContent = '❌ Please select an image file first.'; 
             uploadStatus.style.color = 'red';
+            return;
         }
-      });
-      
-      renderLoadingState(document.getElementById('resultOutput'), textClaim);
 
-      // INSERT THIS LINE FOR LOADING STATE PERSISTENCE 
-      chrome.storage.local.set({ 'lastFactCheckResult': 
-        { flag: 'loading', 
-          claim: textClaim, 
-          message: 'Veritas is verifying this claim...' } 
-      });
+        if (textClaim.length < 5) {
+            uploadStatus.textContent = '❌ Claim text is mandatory (minimum 5 characters).'; 
+            uploadStatus.style.color = 'red';
+            return;
+        }
 
-    } catch (error) {
-      uploadStatus.textContent = `❌ Failed: ${error.message}`; 
-      uploadStatus.style.color = 'red';
-      submitButton.disabled = false;
-      fileInput.disabled = false;
-      textInput.disabled = false;
-    }
-  });
+        submitButton.disabled = true;
+        fileInput.disabled = true;
+        textInput.disabled = true;
+
+        uploadStatus.textContent = '⏳ Converting image...'; 
+        uploadStatus.style.color = 'blue';
+
+        try {
+            const base64Data = await readFileAsBase64(file);
+            const mimeType = file.type;
+
+            uploadStatus.textContent = '⏳ Sending to Gemini... (Check the results column above)'; 
+
+            chrome.runtime.sendMessage({
+                action: 'multimodalUpload',
+                base64: base64Data.split(',')[1],
+                mimeType: mimeType,
+                claim: textClaim
+            }, (response) => {
+                submitButton.disabled = false;
+                fileInput.disabled = false;
+                textInput.disabled = false;
+                uploadStatus.textContent = ''; 
+
+                if (response && response.success) {
+                    uploadStatus.textContent = '✅ Analysis Complete!'; 
+                    uploadStatus.style.color = 'green';
+                } else {
+                    uploadStatus.textContent = '❌ Analysis Failed (Check the results column above)'; 
+                    uploadStatus.style.color = 'red';
+                }
+            });
+            
+            renderLoadingState(document.getElementById('resultOutput'), textClaim);
+
+            // INSERT THIS LINE FOR LOADING STATE PERSISTENCE 
+            chrome.storage.local.set({ 'lastFactCheckResult': 
+                { flag: 'loading', 
+                  claim: textClaim, 
+                  message: 'Veritas is verifying this claim...' } 
+            });
+
+        } catch (error) {
+            uploadStatus.textContent = `❌ Failed: ${error.message}`; 
+            uploadStatus.style.color = 'red';
+            submitButton.disabled = false;
+            fileInput.disabled = false;
+            textInput.disabled = false;
+        }
+    });
 }
 
 function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-  });
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+    });
 }

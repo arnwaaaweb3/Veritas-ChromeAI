@@ -166,46 +166,118 @@
       transform: translateY(0);
     }
 
+    /* =================================================== */
     /* RESULT SECTIONS */
+    /* =================================================== */
     #resultHeader {
       margin-top: 0;
       padding: 12px;
-      border-radius: var(--radius);
+
+      /* Menggunakan 16px sesuai style Glassmorphism-mu */
+      border-radius: 16px;
+
       font-weight: 700;
       font-size: 18px;
       font-family: 'AlteHaasGrotesk';
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      /* Hapus transform: translateZ(0) */
       display: flex;
       align-items: center;
 
-      /* REVISI STYLE BERDASARKAN PERMINTAAN NAWA */
+      /* ========== KEMBALI KE STYLE KLASIK (Putih Solid) ========== */
       background: #FFFFFF;
-      border: 2px solid #1800ad;
-      /* Tambah outline/border warna biru tua */
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+
+      /* Default: Warna netral (biru tua) */
+      color: #1800ad;
+      border: 7px solid #1800ad;
+
+      /* HARMONISASI MARGIN (Dari step sebelumnya) */
+      margin-bottom: 15px;
     }
 
-    /* Dan kita buat kelas status LEBIH SPESIFIK: */
+    /* ---------------------------------------------------- */
+    /* LOGIKA ICON BARU: Mengganti teks simbol dengan gambar */
+    /* ---------------------------------------------------- */
+    .flag-symbol {
+      font-size: 0;
+      /* Hapus ukuran font agar teks lama tidak muncul */
+      width: 35px;
+      /* Lebar untuk ikon SVG */
+      height: 35px;
+      /* Tinggi untuk ikon SVG */
+      margin-right: 10px;
+      line-height: 1;
+      display: inline-block;
+      /* Agar width/height berfungsi */
+      background-size: contain;
+      /* Pastikan ikon muat dalam kotak */
+      background-repeat: no-repeat;
+      background-position: center;
+      /* Default: Ikon netral (jika ada) */
+      background-image: none;
+    }
+
+    /* Ikon untuk Status DEFAULT (Ready to Verify) */
+    #resultHeader.Default .flag-symbol {
+      background-image: url('icons/true.svg');
+      /* Ganti dengan true.svg untuk default/netral */
+    }
+
+    /* Ikon untuk Status HIJAU (Fact / true.svg) */
+    #resultHeader.Hijau .flag-symbol {
+      background-image: url('icons/true.svg');
+    }
+
+    /* Ikon untuk Status MERAH (Misinformation / false.svg) */
+    #resultHeader.Merah .flag-symbol {
+      background-image: url('icons/false.svg');
+    }
+
+    /* Ikon untuk Status KUNING (Warning / warning.svg) */
+    #resultHeader.Kuning .flag-symbol {
+      background-image: url('icons/warning.svg');
+    }
+
+    /* Ikon untuk Status ERROR (Error / error.svg) */
+    #resultHeader.Error .flag-symbol {
+      background-image: url('icons/error.svg');
+    }
+
+    /* Pewarnaan Aksen: Mengganti hanya warna teks dan warna border aksen */
+
     #resultHeader.Hijau {
       color: var(--secondary);
-      /* Warna teks header jadi hijau */
-      border-color: var(--secondary);
-      /* Border-nya ikut warna hijau */
-    }
-
-    #resultHeader.Kuning {
-      color: var(--warning);
-      border-color: var(--warning);
+      /* Warna teks jadi hijau */
+      border: 1px solid var(--secondary);
+      /* Border menjadi solid warna hijau */
     }
 
     #resultHeader.Merah {
       color: var(--danger);
-      border-color: var(--danger);
+      /* Warna teks jadi merah */
+      border: 1px solid var(--danger);
+      /* Border menjadi solid warna merah */
     }
 
-    .flag-symbol {
-      font-size: 20px;
-      margin-right: 10px;
-      line-height: 1;
+    #resultHeader.Kuning {
+      color: var(--warning);
+      /* Warna teks jadi kuning */
+      border: 1px solid var(--warning);
+      /* Border menjadi solid warna kuning */
+    }
+
+    #resultHeader.Error {
+      color: var(--danger);
+      /* Warna teks jadi merah (menggunakan danger) */
+      border: 1px solid var(--danger);
+      /* Border menjadi solid warna merah */
+    }
+
+    #resultHeader.Default {
+      color: var(--primary);
+      /* Warna teks default */
+      border: 1px solid var(--primary);
+      /* Border menjadi solid warna default (primary) */
     }
 
     #claimDisplay {
@@ -282,7 +354,7 @@
       word-break: break-all;
     }
 
-    /* STATUS COLORS */
+    /* STATUS COLORS (Dibiarkan, tapi tidak diterapkan di #resultHeader) */
     .Merah {
       color: var(--danger);
       background: #fff;
@@ -419,6 +491,73 @@
       background: #c33a2d !important;
     }
 
+    /* HISTORY LIST STYLE (DIBIARKAN) */
+    #historyList .history-item {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: var(--radius);
+      border-left: 4px solid #aaa;
+      background: #fcfcfc;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #historyList .history-item:hover {
+      background: #f0f0f0;
+    }
+
+    /* LOGIC FLAG HISTORY DIHAPUS, GANTI DENGAN YANG BARU */
+    #historyList .history-item.Hijau {
+      border-left-color: var(--secondary);
+    }
+
+    #historyList .history-item.Merah {
+      border-left-color: var(--danger);
+    }
+
+    #historyList .history-item.Kuning {
+      border-left-color: var(--warning);
+    }
+
+    .history-timestamp {
+      display: block;
+      font-size: 10px;
+      color: #999;
+      margin-bottom: 5px;
+    }
+
+    .history-claim {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .history-flag {
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin-top: 5px;
+      display: inline-block;
+    }
+
+    /* BACKGROUND FLAG HISTORY DIHAPUS, DIGANTI OLEH CSS BARU NAWA NANTI */
+    .history-flag.Hijau {
+      background: var(--secondary);
+      color: #fff;
+    }
+
+    .history-flag.Merah {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .history-flag.Kuning {
+      background: var(--warning);
+      color: #fff;
+    }
+
     /* =================================================== */
     /* TAB NAVIGATION (Image-Based) - LOGIC FIX */
     /* =================================================== */
@@ -431,7 +570,7 @@
       position: relative;
 
       /* FIX SPACING DARI HEADER */
-      margin-top: 85px;
+      margin-top: 75px;
       margin-bottom: 10px;
 
       background: transparent;
