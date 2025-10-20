@@ -36,14 +36,17 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const firstLineMatch = flagClaimRaw.match(/^(.)+!/); 
     const claimMatch = flagClaimRaw.match(/\*\*(.*?)\*\*/); 
     
-    const headerText = firstLineMatch ? firstLineMatch[0] : `[${result.flag}] ${claimText}`;
-
-    // MORTA EDIT: MENGHAPUS SIMBOL DI SINI, GANTIKAN DENGAN LOGIKA ICON BARU
-    const displayStatusText = headerText.split(' ').slice(1).join(' '); // Ambil teks setelah simbol
+    // Teks header mentah dari AI (misalnya "✅ FAKTA TERVERIFIKASI!")
+    const rawHeaderText = firstLineMatch ? firstLineMatch[0] : `[${result.flag}] ${claimText}`;
     
+    // MORTA FINAL CLEANUP: Menghapus SIMBOL (seperti ✅) dari headerText.
+    // Kita asumsikan simbol selalu ada di awal dan diikuti spasi.
+    const headerText = rawHeaderText.replace(/^[^\w\s]+(\s)?/, '').trim();
+
+    // Menetapkan class agar CSS image flag berjalan
     headerDiv.className = result.flag; 
-    // Ikon sekarang diatur via CSS background-image pada .flag-symbol, jadi isinya dikosongkan.
-    headerDiv.innerHTML = `<span class="flag-symbol" aria-label="${result.flag}"></span> <span>${displayStatusText}</span>`;
+    // MORTA FINAL CLEANUP: Hanya memasukkan teks status murni, bukan HTML tag.
+    headerDiv.textContent = headerText; 
     claimDiv.textContent = claimMatch ? claimMatch[1] : claimText;
     
     // 2. Render Reasonings (Convert Markdown List to HTML List)
@@ -103,7 +106,8 @@ function renderErrorState(flag, message) {
     
     // MORTA EDIT: Menggunakan Error status dan ikon error.svg
     headerDiv.className = 'Error';
-    headerDiv.innerHTML = `<span class="flag-symbol" aria-label="Error"></span> <span>Error Processing</span>`;
+    // MORTA FINAL CLEANUP: Hanya memasukkan teks murni
+    headerDiv.textContent = `Error Processing`;
     claimDiv.textContent = 'Fact check failed completely.'; 
     reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Error Details:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`; 
     linkDiv.innerHTML = '';
@@ -169,9 +173,11 @@ function getFactCheckResult() {
         // Default state if no result
         document.getElementById('loadingState').style.display = 'none';
         resultOutputDiv.style.display = 'block';
-        // MORTA EDIT: Menggunakan Default status dan ikon true.svg untuk 'Ready to Verify'
-        document.getElementById('resultHeader').className = 'Default';
-        document.getElementById('resultHeader').innerHTML = `<span class="flag-symbol" aria-label="Default"></span> <span>Ready to Verify!</span>`; 
+        
+        const headerDiv = document.getElementById('resultHeader');
+        headerDiv.className = 'Default';
+        // MORTA FINAL CLEANUP: Hanya memasukkan teks murni
+        headerDiv.textContent = 'Ready to Verify!'; 
         document.getElementById('claimDisplay').textContent = 'Ready for a New Fact Check.'; 
         document.getElementById('reasoningBox').innerHTML = `<p>Instructions:</p><ul><li>Highlight text & right-click (Fact Check Text/Image).</li><li>Or, use the upload feature below.</li></ul>`; 
         document.getElementById('linkBox').innerHTML = '';
@@ -239,12 +245,12 @@ async function renderHistory() {
 
         const date = new Date(item.timestamp).toLocaleString();
         
-        // MORTA EDIT: Mengganti teks flag dengan span kosong agar ikon history-flag bisa muncul
+        // MORTA FIX: Menghapus span.flag-symbol di history karena kita pakai border-left-color.
         itemDiv.innerHTML = `
             <span class="history-timestamp">${date}</span>
             <div class="history-claim">${item.claim.substring(0, 50)}...</div>
             <div style="font-size: 12px; color: #444;">${summary}</div>
-            <span class="history-flag ${item.flag}"><span class="flag-symbol" aria-label="${item.flag}"></span> ${item.flag.toUpperCase()}</span>
+            <span class="history-flag ${item.flag}">${item.flag.toUpperCase()}</span>
         `;
         
         // Event listener to reload item from history to Fact Check tab
