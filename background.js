@@ -53,8 +53,6 @@ async function runLocalPreProcessing(claimText) {
 // --- HISTORY LOGIC (START) ---
 const HISTORY_KEY = 'veritasHistory';
 const MAX_HISTORY_ITEMS = 20;
-
-// MORTA CHECKPOINT 7.3: API CACHE
 const API_CACHE = new Map();
 const MAX_CACHE_SIZE = 10;
 
@@ -66,7 +64,7 @@ function getFromCache(claim) {
 function setToCache(claim, result) {
     const key = claim.trim().toLowerCase();
     if (API_CACHE.size >= MAX_CACHE_SIZE) {
-        // Hapus item tertua (yang pertama dimasukkan)
+        // Hapus item tertua
         API_CACHE.delete(API_CACHE.keys().next().value);
     }
     API_CACHE.set(key, result);
@@ -275,6 +273,15 @@ chrome.runtime.onMessage.addListener(
 
             return true;
         }
+        if (request.action === 'testGeminiKey') {
+            const apiKeyToTest = request.apiKey;
+
+            // Panggil logika test API
+            testGeminiKeyLogic(apiKeyToTest).then(response => {
+                sendResponse(response);
+            });
+            return true; // Wajib return true untuk pesan asinkron
+        }
     }
 );
 
@@ -465,7 +472,7 @@ async function runFactCheckHybrid(text) {
             };
 
             // MORTA FIX: Set to Cache setelah local fallback berhasil
-            setToCache(text, finalResult); 
+            setToCache(text, finalResult);
             saveFactCheckToHistory(finalResult);
             return finalResult;
         }
@@ -503,12 +510,12 @@ async function runFactCheckHybrid(text) {
     const contents = [{ role: "user", parts: [{ text: prompt }] }];
 
     const result = await executeGeminiCall(text, contents);
-    
+
     // MORTA FIX: Set to Cache setelah cloud call berhasil
     if (result.flag !== 'Error') {
         setToCache(text, result);
     }
-    
+
     return result;
 }
 
@@ -552,7 +559,6 @@ async function urlToBase64(url) {
 // FUNCTION 7: RUN FACT CHECK MULTIMODAL (via Right-Click URL)
 // ... (Remains unchanged)
 // ====================================================================
-// FUNCTION 7: RUN FACT CHECK MULTIMODAL (via Right-Click URL)
 async function runFactCheckMultimodalUrl(imageUrl, text) {
     // --- MORTA CHECKPOINT 7.3: CHECK CACHE ---
     const cachedResult = getFromCache(text);
@@ -604,7 +610,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             const finalResult = { flag: flag, message: message, claim: text };
 
             // MORTA FIX: Set to Cache setelah local fallback berhasil
-            setToCache(text, finalResult); 
+            setToCache(text, finalResult);
             saveFactCheckToHistory(finalResult);
             return finalResult;
         }
@@ -693,19 +699,17 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
     if (result.flag !== 'Error') {
         setToCache(text, result);
     }
-    
+
     return result;
 }
 
 // ====================================================================
 // FUNCTION 9: TEST API KEY LOGIC (DIPANGGIL DARI settings.js)
 // ====================================================================
-
 async function testGeminiKeyLogic(apiKey) {
     const testPrompt = "Test: Is 2+2=4? Respond ONLY with the keyword FACT.";
     const testContents = [{ role: "user", parts: [{ text: testPrompt }] }];
 
-    // Payload minimal untuk testing
     const payload = {
         contents: testContents,
         config: { maxOutputTokens: 10 } // Response sangat singkat
@@ -731,7 +735,6 @@ async function testGeminiKeyLogic(apiKey) {
             }
         }
 
-        // Jika respons tidak 200 OK atau respons AI tidak sesuai
         let errorMessage = data.error ? data.error.message : 'API returned unexpected data.';
         if (errorMessage.includes("API_KEY_INVALID")) {
             errorMessage = "API Key is invalid or restricted.";
