@@ -5,16 +5,55 @@
     <style>
         body { width: 350px; padding: 15px; font-family: sans-serif; }
         input[type="text"] { width: 100%; padding: 8px; margin: 10px 0; box-sizing: border-box; }
-        button { padding: 10px 15px; background-color: #1e8449; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        #status { margin-top: 10px; font-weight: bold; }
+        
+        #buttonContainer {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .setting-button { 
+            padding: 10px 15px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        #saveButton { 
+            background-color: #1e8449; 
+            color: white; 
+            flex-grow: 1; /* Biar tombol save lebih lebar */
+        }
+        #saveButton:hover { background-color: #1a73e8; } 
+
+        #testButton { 
+            background-color: #fbbc05; 
+            color: #333; 
+            width: 100px; /* Lebar tetap untuk Test */
+        }
+        #testButton:hover { background-color: #f9a825; }
+
+        #status { 
+            margin-top: 15px; 
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+        }
     </style>
 </head>
 <body>
     <h3>Veritas: API Key Settings</h3>
     <p>Enter your Gemini Developer API Key (Cloud) below:</p>
     <input type="text" id="apiKeyInput" placeholder="AIzaSyA4aSZOWaoxSnTbmjCm_rLxX-YBF-ZxlOU">
-    <button id="saveButton">Save API Key</button>
-    <div id="status"></div>
+    
+    <div id="buttonContainer">
+        <button id="saveButton" class="setting-button">Save API Key</button>
+        <button id="testButton" class="setting-button">Test Key</button>
+    </div>
+    
+    <div id="status">Ready.</div>
 
     <script src="settings.js"></script>
 </body>

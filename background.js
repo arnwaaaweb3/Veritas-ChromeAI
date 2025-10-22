@@ -54,6 +54,24 @@ async function runLocalPreProcessing(claimText) {
 const HISTORY_KEY = 'veritasHistory';
 const MAX_HISTORY_ITEMS = 20;
 
+// MORTA CHECKPOINT 7.3: API CACHE
+const API_CACHE = new Map();
+const MAX_CACHE_SIZE = 10;
+
+function getFromCache(claim) {
+    const key = claim.trim().toLowerCase();
+    return API_CACHE.get(key);
+}
+
+function setToCache(claim, result) {
+    const key = claim.trim().toLowerCase();
+    if (API_CACHE.size >= MAX_CACHE_SIZE) {
+        // Hapus item tertua (yang pertama dimasukkan)
+        API_CACHE.delete(API_CACHE.keys().next().value);
+    }
+    API_CACHE.set(key, result);
+}
+
 async function saveFactCheckToHistory(result) {
     if (!result || result.flag === 'Error') return;
 
@@ -264,22 +282,21 @@ chrome.runtime.onMessage.addListener(
 // CORE FUNCTION: GEMINI API CALL (Cloud API Core Handler)
 // ... (Remains unchanged)
 // ====================================================================
-// CORE FUNCTION: GEMINI API CALL (Cloud API Core Handler)
 async function executeGeminiCall(claim, contents) {
     const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
     const geminiApiKey = resultStorage.geminiApiKey;
 
     if (!geminiApiKey) {
-        return { 
-            flag: "Error", 
-            message: "Gemini API Key is not set. Cloud access blocked.", 
+        return {
+            flag: "Error",
+            message: "Gemini API Key is not set. Cloud access blocked.",
             debug: "Missing API Key"
         };
     }
-    
+
     const payload = {
         contents: contents,
-        tools: [{ googleSearch: {} }] 
+        tools: [{ googleSearch: {} }]
     };
 
     try {
@@ -288,19 +305,19 @@ async function executeGeminiCall(claim, contents) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "x-goog-api-key": geminiApiKey 
+                "x-goog-api-key": geminiApiKey
             },
-            body: JSON.stringify(payload) 
+            body: JSON.stringify(payload)
         });
 
         const data = await response.json();
-        
+
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-            
-            const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim(); 
+
+            const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim();
             const firstLine = aiResponse.split('\n')[0].trim().toUpperCase();
-            
-            let flag = "Kuning"; 
+
+            let flag = "Kuning";
             const flagMatch = firstLine.match(/^(FACT|MISINFORMATION|CAUTION)/);
 
             if (flagMatch) {
@@ -311,45 +328,21 @@ async function executeGeminiCall(claim, contents) {
                     flag = "Merah";
                 } else if (keyword === "CAUTION") {
                     flag = "Kuning";
-                } 
-            }
-            
-            // --- NEW FORMATTING LOGIC START ---
-            
-            const reasonStart = aiResponse.replace(/^(FACT|MISINFORMATION|CAUTION)\s*(=)?\s*/i, '').trim();
-            const parts = reasonStart.split('Reason:'); 
-            let rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : reasonStart;
-            
-            
-            // --- MORTA FIX: DEDUPLIKASI REASONING ---
-            // 1. Pisahkan teks menjadi baris/paragraf
-            const reasoningLines = rawReasoning.split('\n');
-            const seen = new Set();
-            const uniqueLines = [];
-
-            // 2. Iterasi dan simpan hanya baris unik
-            reasoningLines.forEach(line => {
-                const cleanLine = line.trim().toLowerCase();
-                // Jika baris dimulai dengan '-', abaikan 5 karakter pertama untuk menjaga nomor/simbol list
-                const checkLine = cleanLine.startsWith('-') ? cleanLine.substring(5) : cleanLine;
-                
-                if (checkLine.length > 5 && !seen.has(checkLine)) {
-                    seen.add(checkLine);
-                    uniqueLines.push(line);
-                } else if (checkLine.length <= 5) {
-                    // Simpan baris yang sangat pendek (misal: hanya '-')
-                    uniqueLines.push(line);
                 }
-            });
+            }
 
-            // 3. Gabungkan kembali
-            rawReasoning = uniqueLines.join('\n');
-            // --- END DEDUPLIKASI FIX ---
-            
-            
+            // --- NEW FORMATTING LOGIC START ---
+
+            // Perhatian: Karena prompt sudah diperketat, kita bisa mengandalkan AI
+            const reasonStart = aiResponse.replace(/^(FACT|MISINFORMATION|CAUTION)\s*(=)?\s*/i, '').trim();
+            const parts = reasonStart.split('Reason:');
+            const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : reasonStart;
+
+
+            // Link Grounding Logic (Tetap sama)
             const groundingMetadata = data.candidates[0].groundingMetadata;
-            let linksOutput = "\nLink:\n- (No external sources detected)"; 
-            
+            let linksOutput = "\nLink:\n- (No external sources detected)";
+
             if (groundingMetadata && groundingMetadata.groundingChunks) {
                 const uniqueLinks = new Map();
                 groundingMetadata.groundingChunks
@@ -358,29 +351,29 @@ async function executeGeminiCall(claim, contents) {
                         const title = chunk.web.title || chunk.web.uri.split('/')[2];
                         uniqueLinks.set(chunk.web.uri, title);
                     });
-                
+
                 if (uniqueLinks.size > 0) {
-                     linksOutput = "\nLink:";
-                     uniqueLinks.forEach((title, uri) => {
-                         linksOutput += `\n- [${title}](${uri})`;
-                     });
+                    linksOutput = "\nLink:";
+                    uniqueLinks.forEach((title, uri) => {
+                        linksOutput += `\n- [${title}](${uri})`;
+                    });
                 }
             }
-            
+
             const formattedMessage = `
 **"${claim}"**
 Reason:
 ${rawReasoning}
 ${linksOutput}
             `.trim();
-            
+
             const finalResult = {
                 flag: flag,
-                message: `${flag.toUpperCase()}=${formattedMessage}`, 
+                message: `${flag.toUpperCase()}=${formattedMessage}`,
                 claim: claim
             };
-            
-            saveFactCheckToHistory(finalResult); 
+
+            saveFactCheckToHistory(finalResult);
             return finalResult;
 
         } else if (data.error) {
@@ -390,14 +383,14 @@ ${linksOutput}
                 debug: JSON.stringify(data.error)
             };
         } else {
-            let detailedError = 
-            "Failed to process AI. Unexpected response (Possibly problematic API Key or blocked claim)."; 
+            let detailedError =
+                "Failed to process AI. Unexpected response (Possibly problematic API Key or blocked claim).";
             if (data.promptFeedback && data.promptFeedback.blockReason) {
-                detailedError = 
-                `Claim blocked by Safety Filter: ${data.promptFeedback.blockReason}`; 
+                detailedError =
+                    `Claim blocked by Safety Filter: ${data.promptFeedback.blockReason}`;
             } else if (data.candidates && data.candidates.length === 0) {
-                detailedError = 
-                "Empty AI response. Possible configuration issue or security filter."; 
+                detailedError =
+                    "Empty AI response. Possible configuration issue or security filter.";
             }
 
             return {
@@ -409,7 +402,7 @@ ${linksOutput}
 
     } catch (error) {
         console.error(
-            "[Veritas Cloud Call] Fatal Fetch Error:", error 
+            "[Veritas Cloud Call] Fatal Fetch Error:", error
         );
         return {
             flag: "Error",
@@ -424,7 +417,16 @@ ${linksOutput}
 // ... (Remains unchanged)
 // ====================================================================
 
+// FUNCTION 5: RUN FACT CHECK HYBRID (TEXT ONLY) 
 async function runFactCheckHybrid(text) {
+
+    // --- MORTA CHECKPOINT 7.3: CHECK CACHE ---
+    const cachedResult = getFromCache(text);
+    if (cachedResult) {
+        console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
+        return cachedResult;
+    }
+
     const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
     const geminiApiKey = resultStorage.geminiApiKey;
 
@@ -435,23 +437,22 @@ async function runFactCheckHybrid(text) {
                 "[Veritas Hybrid] Missing API Key. Performing verification using Local AI (On-Device)."
             );
 
-            // CHANGED FALLBACK PROMPT TO ENGLISH (Output must be EN)
+            // Perbaikan: Prompt lebih ketat
             const localPrompt =
                 `You are Veritas AI, a fact-checking specialist. 
             VERIFY this claim: "${text}", based on your internal knowledge. 
-            Respond with ONE KEYWORD at the start: 'FACT', 'MISINFORMATION', or 'CAUTION', followed by a brief and clear reasoning.
-            Provide the entire response in English.`;
+            Respond with ONE KEYWORD at the start: 'FACT', 'MISINFORMATION', or 'CAUTION', followed by **one concise sentence** reasoning.
+            **The entire response must not exceed 60 words and must be in English.**`;
 
             const localResult = await chrome.ai.generateContent({
                 model: 'gemini-flash',
                 prompt: localPrompt,
-                config: { maxOutputTokens: 256 }
+                config: { maxOutputTokens: 60 }, // Max token dikurangi drastis
             });
 
             const aiResponse = localResult.text.trim();
             const upperResponse = aiResponse.toUpperCase();
             let flag = "Kuning";
-            // CHECKING ENGLISH KEYWORDS FOR FALLBACK
             if (upperResponse.startsWith("FACT")) { flag = "Hijau"; }
             else if (upperResponse.startsWith("MISINFORMATION")) { flag = "Merah"; }
             else if (upperResponse.startsWith("CAUTION")) { flag = "Kuning"; }
@@ -467,9 +468,10 @@ async function runFactCheckHybrid(text) {
             return finalResult;
         }
 
+        // MORTA FIX: Jika Local AI juga tidak tersedia (sesuai hasil testingmu)
         return {
             flag: "Error",
-            message: "Gemini API Key is not set. Open Veritas Settings (right-click extension icon > Options) and save your API Key. (Failed to use Local/Cloud AI)",
+            message: "Gemini API Key is not set. Open Veritas Settings (right-click extension icon > Options) and save your API Key. (Local AI currently unavailable on this device.)",
             debug: "Missing API Key & Local AI Unavailable"
         };
     }
@@ -478,17 +480,17 @@ async function runFactCheckHybrid(text) {
 
     const processedText = await runLocalPreProcessing(text);
 
-    // THE OPTIMIZED PROMPT IS NOW ENFORCED ENGLISH
+    // Prompt Cloud (Dibuat lebih ketat untuk menghindari duplikasi)
     const prompt =
         `You are Veritas AI, a specialist in fact-checking. 
     Your task is to VERIFY this claim: "${processedText}". 
     Apply Reasoning: 
-    1) Deductive (comparing the claim with established rules/facts); 
-    2) Triangulation (comparing at least 3 sources from Google Search). 
+    1) Deductive; 
+    2) Triangulation (comparing sources from Google Search). 
     You MUST include the latest facts supporting your assessment. 
     **Apply this Strict Output Format:** (1) ONE KEYWORD at the start ('FACT', 'MISINFORMATION', or 'CAUTION') followed by an equals sign (=); 
-    (2) Explain your reasoning in the format of at least THREE bullet points (-). 
-    If the claim is descriptive, elaborate on more than 3 points. 
+    (2) Explain your reasoning in the format of **exactly THREE concise bullet points (-)**. 
+    **DO NOT ADD ANY EXTRA BULLET POINTS OR REPETITIVE SENTENCES.**
     DO NOT INCLUDE ANY LINKS WITHIN THE REASONING TEXT.
     Provide the entire response in English.`;
 
@@ -554,8 +556,8 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             console.log("[Veritas Hybrid] Multimodal Cloud API Key missing. Falling back to Local AI.");
 
             // Prompt Khusus Local Multimodal
-            const localPrompt = 
-            `VERIFY claim: "${text}", based ONLY on the provided image and your internal knowledge. 
+            const localPrompt =
+                `VERIFY claim: "${text}", based ONLY on the provided image and your internal knowledge. 
             Respond with ONE KEYWORD: 'FACT', 'MISINFORMATION', or 'CAUTION', followed by clear reasoning. 
             DO NOT USE GOOGLE SEARCH. Response must be concise and in English.`;
 
@@ -565,7 +567,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
                 prompt: localPrompt,
                 config: { maxOutputTokens: 256 },
                 contents: [
-                    { text: localPrompt }, 
+                    { text: localPrompt },
                     { inlineData: { mimeType: mimeType, data: base64Image } }
                 ]
             });
@@ -574,7 +576,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             const aiResponse = localResult.text.trim();
             const upperResponse = aiResponse.toUpperCase();
             let flag = "Kuning";
-            if (upperResponse.startsWith("FACT")) { flag = "Hijau"; } 
+            if (upperResponse.startsWith("FACT")) { flag = "Hijau"; }
             else if (upperResponse.startsWith("MISINFORMATION")) { flag = "Merah"; }
             else if (upperResponse.startsWith("CAUTION")) { flag = "Kuning"; }
 
@@ -582,7 +584,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             const message = `${flag.toUpperCase()}=**"${text}"**\nReason:\n${aiResponse}\nLink:\n- [LOCAL AI FALLBACK: Cloud API Key Missing]`;
 
             const finalResult = { flag: flag, message: message, claim: text };
-            
+
             saveFactCheckToHistory(finalResult);
             return finalResult;
         }
@@ -590,21 +592,21 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
         // --- CLOUD CALL (JIKA API KEY ADA) & TIDAK ADA FALLBACK ---
         if (!geminiApiKey) {
             // Ini akan terpicu jika API key tidak ada DAN Local AI tidak tersedia
-            return { 
-                flag: "Error", 
-                message: "Gemini API Key is not set. Multimodal requires Cloud access, and Local AI is unavailable.", 
-                claim: "Multimodal Check Failed" 
-            }; 
+            return {
+                flag: "Error",
+                message: "Gemini API Key is not set. Multimodal requires Cloud access, and Local AI is unavailable.",
+                claim: "Multimodal Check Failed"
+            };
         }
 
         // Lanjut ke Multimodal Direct (menggunakan Cloud API)
         return runFactCheckMultimodalDirect(base64Image, mimeType, text);
 
     } catch (error) {
-        console.error("[Veritas Multimodal] Fatal Fetch/Base64 Error:", error); 
+        console.error("[Veritas Multimodal] Fatal Fetch/Base64 Error:", error);
         return {
             flag: "Error",
-            message: `Network/Fatal Error (Failed to Fetch Image): ${error.message}`, 
+            message: `Network/Fatal Error (Failed to Fetch Image): ${error.message}`,
             debug: error.message
         };
     }
@@ -614,26 +616,33 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 // FUNCTION 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 from Upload/Other Functions)
 // ... (Remains unchanged)
 // ====================================================================
-
 async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
+    // --- MORTA CHECKPOINT 7.3: CHECK CACHE (khusus Multimodal, cache key harus lebih spesifik, tapi kita gunakan teks klaim saja dulu) ---
+    const cachedResult = getFromCache(text);
+    if (cachedResult) {
+        console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
+        return cachedResult;
+    }
+    
     const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
     const geminiApiKey = resultStorage.geminiApiKey;
 
     if (!geminiApiKey) {
+        // MORTA FIX: Error message disederhanakan
         return { flag: "Error", message: "Gemini API Key is not set. Cloud access blocked.", claim: "Multimodal Check Failed" };
     }
 
-    // THE OPTIMIZED PROMPT IS NOW ENFORCED ENGLISH
+    // Prompt Cloud (Dibuat lebih ketat untuk menghindari duplikasi)
     const promptText =
         `You are Veritas AI, a specialist in fact-checking. 
     Compare and VERIFY this claim: "${text}", with (1) the provided image and (2) external context from Google Search. 
     Apply Reasoning: 
-    1) Deductive (membandingkan klaim dengan aturan/fakta mapan); 
-    2) Triangulasi (membandingkan Minimal 3 sumber dari Google Search). 
+    1) Deductive; 
+    2) Triangulation (comparing sources from Google Search). 
     You MUST include the latest findings supporting your assessment. 
     **Apply this Strict Output Format:** (1) ONE KEYWORD at the start ('FACT', 'MISINFORMATION', or 'CAUTION') followed by an equals sign (=); 
-    (2) Explain your reasoning in the format of at least THREE bullet points (-). 
-    If the claim is descriptive, elaborate on more than 3 points. 
+    (2) Explain your reasoning in the format of **exactly THREE concise bullet points (-)**. 
+    **DO NOT ADD ANY EXTRA BULLET POINTS OR REPETITIVE SENTENCES.**
     DO NOT INCLUDE ANY LINKS WITHIN THE REASONING TEXT.
     Provide the entire response in English.`;
 
@@ -658,3 +667,65 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
 
     return executeGeminiCall(text, contents);
 }
+
+// ====================================================================
+// FUNCTION 9: TEST API KEY LOGIC (DIPANGGIL DARI settings.js)
+// ====================================================================
+
+async function testGeminiKeyLogic(apiKey) {
+    const testPrompt = "Test: Is 2+2=4? Respond ONLY with the keyword FACT.";
+    const testContents = [{ role: "user", parts: [{ text: testPrompt }] }];
+
+    // Payload minimal untuk testing
+    const payload = {
+        contents: testContents,
+        config: { maxOutputTokens: 10 } // Response sangat singkat
+    };
+
+    try {
+        const response = await fetch(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": apiKey
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.candidates && data.candidates.length > 0) {
+            const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim().toUpperCase();
+            if (aiResponse.startsWith("FACT")) {
+                return { success: true, message: "Key successfully validated." };
+            }
+        }
+
+        // Jika respons tidak 200 OK atau respons AI tidak sesuai
+        let errorMessage = data.error ? data.error.message : 'API returned unexpected data.';
+        if (errorMessage.includes("API_KEY_INVALID")) {
+            errorMessage = "API Key is invalid or restricted.";
+        }
+        return { success: false, message: errorMessage };
+
+    } catch (error) {
+        return { success: false, message: `Network/Fetch Error: ${error.message}` };
+    }
+}
+
+// Tambahkan Listener untuk Test Key dari settings.js
+chrome.runtime.onMessage.addListener(
+    (request, sender, sendResponse) => {
+        // ... (Listener 'multimodalUpload' yang sudah ada) ...
+
+        if (request.action === 'testGeminiKey') {
+            const apiKeyToTest = request.apiKey;
+
+            testGeminiKeyLogic(apiKeyToTest).then(response => {
+                sendResponse(response);
+            });
+            return true; // Asynchronous response requires returning true
+        }
+    }
+);
