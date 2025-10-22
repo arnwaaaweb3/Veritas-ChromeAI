@@ -15,7 +15,7 @@
             --radius: 10px;
         }
 
-        /* FONT DECLARATION (Asumsi path sudah benar: fonts/*.ttf) */
+        /* FONT DECLARATION  */
         @font-face {
             font-family: 'ParaRegular';
             src: url('fonts/ParaRegular.ttf') format('truetype');
@@ -167,44 +167,32 @@
         }
 
         /* =================================================== */
-        /* RESULT SECTIONS (BARU: Image Flagging System - Full SVG Background) */
+        /* RESULT SECTIONS (NEW: Image Flagging System - Full SVG Background) */
         /* =================================================== */
         #resultHeader {
-            /* Kontainer utama untuk menampung flag image */
             margin-top: 0;
             
             /* Dimensi dan Layout Header */
-            width: 100%; /* Ambil penuh lebar container popup */
+            width: 100%; 
             min-height: 45px;
             height: 105px;
-            
             border-radius: var(--radius);
             font-weight: 700;
             font-size: 18px;
             font-family: 'AlteHaasGrotesk';
-            
-            /* Hapus display: flex, align-items, justify-content agar teks bisa di-indent */
-            
-            padding: 0; /* Hapus padding agar gambar full */
-            
-            /* Default Style Netral */
-            background-color: #f0f4ff; /* Background fallback sebelum image load/saat Default */
+            padding: 0;
+            background-color: #f0f4ff; 
             color: var(--primary);
             border: 1px solid var(--primary);
-            
             margin-bottom: 15px;
-            
-            /* Setting Dasar Background Image (untuk status dinamis) */
-            background-size: cover; /* Penting: agar 1920x1080px SVG muat di 320px width */
+            background-size: cover; 
             background-position: center;
             background-repeat: no-repeat;
             transition: background-image 0.3s ease;
-            
-            /* MORTA FIX: Menyembunyikan teks lama agar hanya gambar yang terlihat */
             text-indent: 100%;
             white-space: nowrap;
             overflow: hidden;
-            display: block; /* Ganti dari flex ke block agar indent berfungsi */
+            display: block;
         }
         
         /* ---------------------------------------------------- */

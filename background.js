@@ -541,8 +541,6 @@ async function urlToBase64(url) {
 // FUNCTION 7: RUN FACT CHECK MULTIMODAL (via Right-Click URL)
 // ... (Remains unchanged)
 // ====================================================================
-// FUNCTION 7: RUN FACT CHECK MULTIMODAL (via Right-Click URL)
-// FUNCTION 7: RUN FACT CHECK MULTIMODAL (via Right-Click URL)
 async function runFactCheckMultimodalUrl(imageUrl, text) {
     try {
         const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
@@ -556,8 +554,8 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             console.log("[Veritas Hybrid] Multimodal Cloud API Key missing. Falling back to Local AI.");
 
             // Prompt Khusus Local Multimodal
-            const localPrompt =
-                `VERIFY claim: "${text}", based ONLY on the provided image and your internal knowledge. 
+            const localPrompt = 
+            `VERIFY claim: "${text}", based ONLY on the provided image and your internal knowledge. 
             Respond with ONE KEYWORD: 'FACT', 'MISINFORMATION', or 'CAUTION', followed by clear reasoning. 
             DO NOT USE GOOGLE SEARCH. Response must be concise and in English.`;
 
@@ -567,7 +565,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
                 prompt: localPrompt,
                 config: { maxOutputTokens: 256 },
                 contents: [
-                    { text: localPrompt },
+                    { text: localPrompt }, 
                     { inlineData: { mimeType: mimeType, data: base64Image } }
                 ]
             });
@@ -576,7 +574,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             const aiResponse = localResult.text.trim();
             const upperResponse = aiResponse.toUpperCase();
             let flag = "Kuning";
-            if (upperResponse.startsWith("FACT")) { flag = "Hijau"; }
+            if (upperResponse.startsWith("FACT")) { flag = "Hijau"; } 
             else if (upperResponse.startsWith("MISINFORMATION")) { flag = "Merah"; }
             else if (upperResponse.startsWith("CAUTION")) { flag = "Kuning"; }
 
@@ -584,7 +582,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             const message = `${flag.toUpperCase()}=**"${text}"**\nReason:\n${aiResponse}\nLink:\n- [LOCAL AI FALLBACK: Cloud API Key Missing]`;
 
             const finalResult = { flag: flag, message: message, claim: text };
-
+            
             saveFactCheckToHistory(finalResult);
             return finalResult;
         }
@@ -592,21 +590,21 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
         // --- CLOUD CALL (JIKA API KEY ADA) & TIDAK ADA FALLBACK ---
         if (!geminiApiKey) {
             // Ini akan terpicu jika API key tidak ada DAN Local AI tidak tersedia
-            return {
-                flag: "Error",
-                message: "Gemini API Key is not set. Multimodal requires Cloud access, and Local AI is unavailable.",
-                claim: "Multimodal Check Failed"
-            };
+            return { 
+                flag: "Error", 
+                message: "Gemini API Key is not set. Multimodal requires Cloud access, and Local AI is unavailable.", 
+                claim: "Multimodal Check Failed" 
+            }; 
         }
 
         // Lanjut ke Multimodal Direct (menggunakan Cloud API)
         return runFactCheckMultimodalDirect(base64Image, mimeType, text);
 
     } catch (error) {
-        console.error("[Veritas Multimodal] Fatal Fetch/Base64 Error:", error);
+        console.error("[Veritas Multimodal] Fatal Fetch/Base64 Error:", error); 
         return {
             flag: "Error",
-            message: `Network/Fatal Error (Failed to Fetch Image): ${error.message}`,
+            message: `Network/Fatal Error (Failed to Fetch Image): ${error.message}`, 
             debug: error.message
         };
     }
