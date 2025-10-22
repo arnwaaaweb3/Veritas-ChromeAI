@@ -464,6 +464,8 @@ async function runFactCheckHybrid(text) {
                 claim: text
             };
 
+            // MORTA FIX: Set to Cache setelah local fallback berhasil
+            setToCache(text, finalResult); 
             saveFactCheckToHistory(finalResult);
             return finalResult;
         }
@@ -500,7 +502,14 @@ async function runFactCheckHybrid(text) {
 
     const contents = [{ role: "user", parts: [{ text: prompt }] }];
 
-    return executeGeminiCall(text, contents);
+    const result = await executeGeminiCall(text, contents);
+    
+    // MORTA FIX: Set to Cache setelah cloud call berhasil
+    if (result.flag !== 'Error') {
+        setToCache(text, result);
+    }
+    
+    return result;
 }
 
 // ====================================================================
@@ -543,7 +552,16 @@ async function urlToBase64(url) {
 // FUNCTION 7: RUN FACT CHECK MULTIMODAL (via Right-Click URL)
 // ... (Remains unchanged)
 // ====================================================================
+// FUNCTION 7: RUN FACT CHECK MULTIMODAL (via Right-Click URL)
 async function runFactCheckMultimodalUrl(imageUrl, text) {
+    // --- MORTA CHECKPOINT 7.3: CHECK CACHE ---
+    const cachedResult = getFromCache(text);
+    if (cachedResult) {
+        console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
+        return cachedResult;
+    }
+    // --- END CHECK CACHE ---
+
     try {
         const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
         const geminiApiKey = resultStorage.geminiApiKey;
@@ -585,6 +603,8 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 
             const finalResult = { flag: flag, message: message, claim: text };
 
+            // MORTA FIX: Set to Cache setelah local fallback berhasil
+            setToCache(text, finalResult); 
             saveFactCheckToHistory(finalResult);
             return finalResult;
         }
@@ -616,14 +636,16 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 // FUNCTION 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 from Upload/Other Functions)
 // ... (Remains unchanged)
 // ====================================================================
+// FUNCTION 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 from Upload/Other Functions)
 async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
-    // --- MORTA CHECKPOINT 7.3: CHECK CACHE (khusus Multimodal, cache key harus lebih spesifik, tapi kita gunakan teks klaim saja dulu) ---
+    // --- MORTA CHECKPOINT 7.3: CHECK CACHE ---
     const cachedResult = getFromCache(text);
     if (cachedResult) {
         console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
         return cachedResult;
     }
-    
+    // --- END CHECK CACHE ---
+
     const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
     const geminiApiKey = resultStorage.geminiApiKey;
 
@@ -665,7 +687,14 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
         }
     ];
 
-    return executeGeminiCall(text, contents);
+    const result = await executeGeminiCall(text, contents);
+
+    // MORTA FIX: Set to Cache setelah cloud call berhasil
+    if (result.flag !== 'Error') {
+        setToCache(text, result);
+    }
+    
+    return result;
 }
 
 // ====================================================================
