@@ -2,10 +2,28 @@ document.addEventListener('DOMContentLoaded', initializePopup);
 
 const HISTORY_KEY = 'veritasHistory'; // Declaration of HISTORY_KEY
 
+// MORTA FIX: Helper function untuk mendapatkan teks display murni
+function getDisplayFlag(flag) {
+    switch (flag.toUpperCase()) {
+        case 'HIJAU':
+            return 'FACT';
+        case 'MERAH':
+            return 'MISINFORMATION';
+        case 'KUNING':
+            return 'CAUTION';
+        case 'ERROR':
+            return 'ERROR';
+        case 'DEFAULT':
+            return 'READY TO VERIFY';
+        default:
+            return flag.toUpperCase();
+    }
+}
+
 // Utility to parse Markdown results (according to the new format in background.js)
 function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const rawMessage = result.message;
-    
+
     // 1. Check if the message is an Error
     if (result.flag === 'Error') {
         renderErrorState(result.flag, rawMessage);
@@ -20,48 +38,42 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const claimDiv = document.getElementById('claimDisplay');
     const reasonDiv = document.getElementById('reasoningBox');
     const linkDiv = document.getElementById('linkBox');
-    
+
     // --- Parsing Logic ---
-    
+
     // Split based on header: Reason: and Link:
     const reasonSplit = rawMessage.split('Reason:');
     const linkSplit = (reasonSplit.length > 1) ? reasonSplit[1].split('Link:') : [rawMessage, ''];
-    
+
     const flagClaimRaw = reasonSplit[0].trim();
     const rawReasonings = linkSplit[0].trim();
     const rawLinks = (linkSplit.length > 1) ? linkSplit[1].trim() : "";
-    
-    // 1. Render Header and Claim
-    // Mengambil teks status murni dari AI (misalnya "✅ FAKTA TERVERIFIKASI!")
-    const firstLineMatch = flagClaimRaw.match(/^(.)+!/); 
-    const claimMatch = flagClaimRaw.match(/\*\*(.*?)\*\*/); 
-    
-    // Teks header mentah dari AI (misalnya "✅ FAKTA TERVERIFIKASI!")
-    const rawHeaderText = firstLineMatch ? firstLineMatch[0] : `[${result.flag}] ${claimText}`;
-    
-    // MORTA FINAL CLEANUP: Menghapus SIMBOL (seperti ✅) dari headerText.
-    // Kita asumsikan simbol selalu ada di awal dan diikuti spasi.
-    const headerText = rawHeaderText.replace(/^[^\w\s]+(\s)?/, '').trim();
 
-    // Menetapkan class agar CSS image flag berjalan
-    headerDiv.className = result.flag; 
-    // MORTA FINAL CLEANUP: Hanya memasukkan teks status murni, bukan HTML tag.
-    headerDiv.textContent = headerText; 
+    // 1. Render Header and Claim
+    // MORTA FIX: Ambil teks display murni dari helper function
+    const displayHeaderText = getDisplayFlag(result.flag);
+
+    // Menetapkan class
+    headerDiv.className = result.flag;
+    headerDiv.textContent = displayHeaderText;
+
+    // Parsing claim dari bolded text
+    const claimMatch = flagClaimRaw.match(/\*\*(.*?)\*\*/);
     claimDiv.textContent = claimMatch ? claimMatch[1] : claimText;
-    
+
     // 2. Render Reasonings (Convert Markdown List to HTML List)
     let reasonsHTML = '<p>Reason:</p><ul>';
     const reasonLines = rawReasonings.split('\n').filter(line => line.startsWith('-'));
-    
+
     if (reasonLines.length > 0) {
         reasonLines.forEach(line => {
             let itemContent = line.substring(1).trim(); // Remove '-'
             // Convert Bolding **text** to <strong>text</strong> inside list item
-            itemContent = itemContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+            itemContent = itemContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             reasonsHTML += `<li>${itemContent}</li>`;
         });
     } else {
-        reasonsHTML += `<li>(Unstructured/undetected reasoning from AI)</li>`; 
+        reasonsHTML += `<li>(Unstructured/undetected reasoning from AI)</li>`;
     }
     reasonsHTML += '</ul>';
     reasonDiv.innerHTML = reasonsHTML;
@@ -79,13 +91,13 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
                 // LinkMatch[1] = title, LinkMatch[2] = URL
                 linksHTML += `<li><a href="${linkMatch[2]}" target="_blank">${linkMatch[1]}</a></li>`;
             } else {
-                 // If link format fails, display as plain text
-                 linksHTML += `<li>${line.substring(1).trim()}</li>`; 
+                // If link format fails, display as plain text
+                linksHTML += `<li>${line.substring(1).trim()}</li>`;
             }
             linkRegex.lastIndex = 0; // Reset regex index
         });
     } else {
-        linksHTML += `<li>(No external sources detected)</li>`; 
+        linksHTML += `<li>(No external sources detected)</li>`;
     }
     linksHTML += '</ul>';
     linkDiv.innerHTML = linksHTML;
@@ -95,7 +107,7 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
 function renderErrorState(flag, message) {
     const outputDiv = document.getElementById('resultOutput');
     const loadingDiv = document.getElementById('loadingState');
-    
+
     loadingDiv.style.display = 'none';
     outputDiv.style.display = 'block';
 
@@ -103,13 +115,14 @@ function renderErrorState(flag, message) {
     const claimDiv = document.getElementById('claimDisplay');
     const reasonDiv = document.getElementById('reasoningBox');
     const linkDiv = document.getElementById('linkBox');
-    
-    // MORTA EDIT: Menggunakan Error status dan ikon error.svg
+
+    // MORTA FIX: Ambil teks display murni dari helper function
+    const displayHeaderText = getDisplayFlag(flag);
+
     headerDiv.className = 'Error';
-    // MORTA FINAL CLEANUP: Hanya memasukkan teks murni
-    headerDiv.textContent = `Error Processing`;
-    claimDiv.textContent = 'Fact check failed completely.'; 
-    reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Error Details:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`; 
+    headerDiv.textContent = displayHeaderText;
+    claimDiv.textContent = 'Fact check failed completely.';
+    reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Error Details:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`;
     linkDiv.innerHTML = '';
 }
 
@@ -126,7 +139,7 @@ function renderLoadingState(resultBox, claim) {
 
     outputDiv.style.display = 'none';
     loadingDiv.style.display = 'flex';
-    claimText.textContent = `"${claim || 'Loading claim data...'}"`; 
+    claimText.textContent = `"${claim || 'Verifying claim data...'}"`;
 }
 
 
@@ -136,7 +149,7 @@ function handleLiveResultUpdate(request, sender, sendResponse) {
         const resultOutputDiv = document.getElementById('resultOutput');
 
         const { flag, message, claim } = request.resultData;
-        
+
         if (flag === 'loading') {
             renderLoadingState(resultOutputDiv, claim);
             return;
@@ -149,7 +162,7 @@ function handleLiveResultUpdate(request, sender, sendResponse) {
 // ✅ Get result from storage (e.g., when popup is newly opened)
 function getFactCheckResult() {
     const resultOutputDiv = document.getElementById('resultOutput');
-    
+
     chrome.storage.local.get(['lastFactCheckResult'], (storage) => {
         const result = storage.lastFactCheckResult;
 
@@ -168,53 +181,47 @@ function getFactCheckResult() {
         if (result && result.message) {
             parseAndRenderResult(result, result.claim, resultOutputDiv);
             return;
-        } 
+        }
 
         // Default state if no result
         document.getElementById('loadingState').style.display = 'none';
         resultOutputDiv.style.display = 'block';
-        
+
         const headerDiv = document.getElementById('resultHeader');
         headerDiv.className = 'Default';
-        // MORTA FINAL CLEANUP: Hanya memasukkan teks murni
-        headerDiv.textContent = 'Ready to Verify!'; 
-        document.getElementById('claimDisplay').textContent = 'Ready for a New Fact Check.'; 
-        document.getElementById('reasoningBox').innerHTML = `<p>Instructions:</p><ul><li>Highlight text & right-click (Fact Check Text/Image).</li><li>Or, use the upload feature below.</li></ul>`; 
+        // MORTA FIX: Hanya memasukkan teks murni
+        headerDiv.textContent = getDisplayFlag('DEFAULT');
+        document.getElementById('claimDisplay').textContent = 'Ready for a New Fact Check.';
+        document.getElementById('reasoningBox').innerHTML = `<p>Instructions:</p><ul><li>Highlight text & right-click (Fact Check Text/Image).</li><li>Or, use the upload feature below.</li></ul>`;
         document.getElementById('linkBox').innerHTML = '';
-        
+
     });
 }
 
 // --- HISTORY LOGIC (START) ---
+// ... (Logic tetap sama) ...
 
 function switchTab(tabName) {
     const factCheckTab = document.getElementById('factCheckTab');
     const historyTab = document.getElementById('historyTab');
-    // Ambil elemen tab baru
-    const tabFCButton = document.getElementById('tabFactCheck'); 
-    const tabHButton = document.getElementById('tabHistory'); 
+    const tabFCButton = document.getElementById('tabFactCheck');
+    const tabHButton = document.getElementById('tabHistory');
 
     if (tabName === 'history') {
         factCheckTab.style.display = 'none';
         historyTab.style.display = 'block';
-        
-        // --- Style Changes Here ---
-        // Toggle class 'active' untuk visualisasi gambar (hactive.png)
+
         if (tabFCButton) tabFCButton.classList.remove('active');
         if (tabHButton) tabHButton.classList.add('active');
-        // --- End Style Changes ---
-        
+
         renderHistory();
-        
+
     } else { // 'factCheck'
         factCheckTab.style.display = 'block';
         historyTab.style.display = 'none';
-        
-        // --- Style Changes Here ---
-        // Toggle class 'active' untuk visualisasi gambar (fcactive.png)
+
         if (tabHButton) tabHButton.classList.remove('active');
         if (tabFCButton) tabFCButton.classList.add('active');
-        // --- End Style Changes ---
     }
 }
 
@@ -223,14 +230,14 @@ async function renderHistory() {
     const status = document.getElementById('historyStatus');
 
     historyList.innerHTML = '';
-    status.textContent = 'Loading history...'; 
+    status.textContent = 'Loading history...';
     status.style.display = 'block';
 
     const storage = await chrome.storage.local.get([HISTORY_KEY]);
     const history = storage[HISTORY_KEY] || [];
 
     if (history.length === 0) {
-        status.textContent = 'No fact check history yet.'; 
+        status.textContent = 'No fact check history yet.';
         return;
     }
 
@@ -239,12 +246,12 @@ async function renderHistory() {
     history.forEach((item, index) => {
         const itemDiv = document.createElement('div');
         itemDiv.className = `history-item ${item.flag}`;
-        
+
         // Get brief summary from reasoning (text after Flag)
         const summary = item.message.split('Reason:')[0].replace(/\*\*(.*?)\*\*/, '').trim().substring(0, 100) + '...';
 
         const date = new Date(item.timestamp).toLocaleString();
-        
+
         // MORTA FIX: Menghapus span.flag-symbol di history karena kita pakai border-left-color.
         itemDiv.innerHTML = `
             <span class="history-timestamp">${date}</span>
@@ -252,34 +259,32 @@ async function renderHistory() {
             <div style="font-size: 12px; color: #444;">${summary}</div>
             <span class="history-flag ${item.flag}">${item.flag.toUpperCase()}</span>
         `;
-        
-        // Event listener to reload item from history to Fact Check tab
+
         itemDiv.addEventListener('click', () => {
-            // Use logic from handleLiveResultUpdate to display data
             handleLiveResultUpdate({
-                action: 'displayResult', 
-                resultData: item 
+                action: 'displayResult',
+                resultData: item
             });
-            switchTab('factCheck'); // Return to Fact Check tab
+            switchTab('factCheck');
         });
 
         historyList.appendChild(itemDiv);
     });
-    
+
 }
 
 // SNIPPET 4C: clearHistory function in popup.js
 async function clearHistory() {
-    if (confirm("Are you sure you want to delete ALL fact check history? This action cannot be undone.")) { 
-        
+    if (confirm("Are you sure you want to delete ALL fact check history? This action cannot be undone.")) {
+
         // Delete History array from local storage
         chrome.storage.local.remove(HISTORY_KEY, () => {
             // After deletion, refresh history display
-            renderHistory(); 
-            
+            renderHistory();
+
             // Notify the user
             const status = document.getElementById('historyStatus');
-            status.textContent = '✅ All history successfully deleted!'; 
+            status.textContent = '✅ All history successfully deleted!';
             status.style.display = 'block';
         });
     }
@@ -299,17 +304,14 @@ function initializePopup() {
 
     chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
 
-    // V: Get 2 flags: isContextualCheck (from right-click) and hasSeenSplash (from manual open)
     chrome.storage.local.get(['isContextualCheck', 'hasSeenSplash'], (storage) => {
         const isContextualCheck = storage.isContextualCheck;
         const hasSeenSplash = storage.hasSeenSplash;
-        
-        // Remove contextual check flag after retrieving
+
         if (isContextualCheck) {
             chrome.storage.local.remove('isContextualCheck');
         }
 
-        // Determine if Splash should be bypassed (already seen OR opened from Contextual Check)
         const shouldBypassSplash = isContextualCheck || hasSeenSplash;
 
 
@@ -321,14 +323,11 @@ function initializePopup() {
             getFactCheckResult();
             setupUploadListener();
         } else {
-            // V: This is the first manual run. Set flag so it doesn't appear again
-            chrome.storage.local.set({ 'hasSeenSplash': true }); 
-            
-            if (video) {
-                video.pause();
-                video.currentTime = 0;
-                video.play();
-            }
+            chrome.storage.local.set({ 'hasSeenSplash': true });
+
+            if (video) video.pause();
+            if (video) video.currentTime = 0;
+            if (video) video.play();
 
             const endSplashAndInit = () => {
                 if (splash) splash.classList.add('fade-out');
@@ -341,7 +340,6 @@ function initializePopup() {
             };
 
             setTimeout(() => {
-                // Fallback timer. Cek apakah splash sudah disembunyikan oleh video.addEventListener
                 if (splash && splash.style.display !== 'none' && !splash.classList.contains('fade-out')) {
                     endSplashAndInit();
                 }
@@ -351,16 +349,13 @@ function initializePopup() {
                 video.addEventListener('ended', endSplashAndInit);
             }
         }
-        
-        // 💡 LISTENER TAB BARU: Dijalankan setelah semua inisialisasi selesai
-        // Ini menghubungkan elemen tab Fact Check dan History ke logika switchTab
+
         document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
         document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
-        switchTab('factCheck'); // Atur default tab saat popup dibuka
-        
+        switchTab('factCheck');
+
     });
 
-    // Listener clear history tetap aktif
     document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 
 }
@@ -381,13 +376,13 @@ function setupUploadListener() {
         const textClaim = textInput.value.trim();
 
         if (!file) {
-            uploadStatus.textContent = '❌ Please select an image file first.'; 
+            uploadStatus.textContent = '❌ Please select an image file first.';
             uploadStatus.style.color = 'red';
             return;
         }
 
         if (textClaim.length < 5) {
-            uploadStatus.textContent = '❌ Claim text is mandatory (minimum 5 characters).'; 
+            uploadStatus.textContent = '❌ Claim text is mandatory (minimum 5 characters).';
             uploadStatus.style.color = 'red';
             return;
         }
@@ -396,14 +391,14 @@ function setupUploadListener() {
         fileInput.disabled = true;
         textInput.disabled = true;
 
-        uploadStatus.textContent = '⏳ Converting image...'; 
+        uploadStatus.textContent = '⏳ Converting image...';
         uploadStatus.style.color = 'blue';
 
         try {
             const base64Data = await readFileAsBase64(file);
             const mimeType = file.type;
 
-            uploadStatus.textContent = '⏳ Sending to Gemini... (Check the results column above)'; 
+            uploadStatus.textContent = '⏳ Sending to Gemini... (Check the results column above)';
 
             chrome.runtime.sendMessage({
                 action: 'multimodalUpload',
@@ -414,28 +409,31 @@ function setupUploadListener() {
                 submitButton.disabled = false;
                 fileInput.disabled = false;
                 textInput.disabled = false;
-                uploadStatus.textContent = ''; 
+                uploadStatus.textContent = '';
 
                 if (response && response.success) {
-                    uploadStatus.textContent = '✅ Analysis Complete!'; 
+                    uploadStatus.textContent = '✅ Analysis Complete!';
                     uploadStatus.style.color = 'green';
                 } else {
-                    uploadStatus.textContent = '❌ Analysis Failed (Check the results column above)'; 
+                    uploadStatus.textContent = '❌ Analysis Failed (Check the results column above)';
                     uploadStatus.style.color = 'red';
                 }
             });
-            
+
             renderLoadingState(document.getElementById('resultOutput'), textClaim);
 
             // INSERT THIS LINE FOR LOADING STATE PERSISTENCE 
-            chrome.storage.local.set({ 'lastFactCheckResult': 
-                { flag: 'loading', 
-                  claim: textClaim, 
-                  message: 'Veritas is verifying this claim...' } 
+            chrome.storage.local.set({
+                'lastFactCheckResult':
+                {
+                    flag: 'loading',
+                    claim: textClaim,
+                    message: 'Veritas is verifying this claim...'
+                }
             });
 
         } catch (error) {
-            uploadStatus.textContent = `❌ Failed: ${error.message}`; 
+            uploadStatus.textContent = `❌ Failed: ${error.message}`;
             uploadStatus.style.color = 'red';
             submitButton.disabled = false;
             fileInput.disabled = false;

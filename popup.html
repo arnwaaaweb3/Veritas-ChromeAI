@@ -131,7 +131,7 @@
             right: 16px;
             display: flex;
             align-items: center;
-            gap: 0;
+            gap: 0.5rem;
             z-index: 30;
         }
 
@@ -144,6 +144,35 @@
             height: 80px;
             opacity: 0.9;
             flex-shrink: 0;
+        }
+
+        .circleBox {
+            width: 3rem;
+            /* ukuran lingkaran */
+            height: 3rem;
+            border-radius: 50%;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow:
+                0 3px 6px rgba(0, 0, 0, 0.2),
+                0 8px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            border: 2px solid var(--primary);
+        }
+
+        .circleBox .topLogo {
+            width: 95%;
+            height: 95%;
+            object-fit: contain;
+        }
+
+        .circleBox:hover {
+            transform: translateY(-3px);
+            box-shadow:
+                0 5px 10px rgba(0, 0, 0, 0.25),
+                0 10px 25px rgba(0, 0, 0, 0.1);
         }
 
         /* MAIN CONTENT */
@@ -167,82 +196,106 @@
         }
 
         /* =================================================== */
-        /* RESULT SECTIONS (NEW: Image Flagging System - Full SVG Background) */
+        /* RESULT SECTIONS (FINAL CSS REVERT: HIGH PERFORMANCE) */
         /* =================================================== */
         #resultHeader {
             margin-top: 0;
-            
-            /* Dimensi dan Layout Header */
-            width: 100%; 
-            min-height: 45px;
-            height: 105px;
+            width: 14.25rem;
+            height: 1rem;
+            justify-content: center;
+            padding: 15px 20px;
             border-radius: var(--radius);
-            font-weight: 700;
-            font-size: 18px;
-            font-family: 'AlteHaasGrotesk';
-            padding: 0;
-            background-color: #f0f4ff; 
-            color: var(--primary);
-            border: 1px solid var(--primary);
+            font-weight: 800;
+            font-size: 25px;
+            font-family: 'ParaRegular';
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin-bottom: 15px;
-            background-size: cover; 
-            background-position: center;
-            background-repeat: no-repeat;
-            transition: background-image 0.3s ease;
-            text-indent: 100%;
-            white-space: nowrap;
-            overflow: hidden;
-            display: block;
+            letter-spacing: 0.2rem;
+            text-indent: 0;
+            white-space: normal;
+            overflow: visible;
+            transition: all 0.2s ease;
         }
-        
+
         /* ---------------------------------------------------- */
-        /* LOGIKA FLAG PER STATUS: Memanggil SVG yang sesuai */
+        /* LOGIKA FLAG PER STATUS: Menggunakan Warna Solid & Shadow */
         /* ---------------------------------------------------- */
 
         /* 1. HIJAU (Fact) */
         #resultHeader.Hijau {
-            /* Teks disembunyikan oleh setting default #resultHeader di atas */
+            color: #fff;
+            font-weight: 800;
+            box-shadow: 0 5px 10px rgba(52, 168, 83, 0.4);
             border: none;
-            background-image: url('icons/fact.svg'); 
+            background: linear-gradient(270deg, #34A853, #7ee071, #34A853);
+            background-size: 400% 400%;
+            animation: gradientMove 8s ease infinite;
         }
 
         /* 2. MERAH (Misinformation / False) */
         #resultHeader.Merah {
-            /* Teks disembunyikan oleh setting default #resultHeader di atas */
+            color: #fff;
+            background-color: var(--danger);
+            box-shadow: 0 5px 10px rgba(234, 67, 53, 0.4);
             border: none;
-            box-shadow: 0 5px 15px rgba(234, 67, 53, 0.5); /* Shadow Merah */
-            background-image: url('icons/false.svg'); 
+            background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
+            background-size: 400% 400%;
+            animation: gradientMove 8s ease infinite;
         }
 
         /* 3. KUNING (Warning / Caution) */
         #resultHeader.Kuning {
-            /* Teks disembunyikan, tapi kita pertahankan border/warna solid */
-            border: 1px solid var(--warning);
-            background-image: url('icons/warning.svg');
-            box-shadow: 0 5px 15px rgba(251, 188, 5, 0.5); /* Shadow Kuning */
+            color: var(--text);
+            background-color: var(--warning);
+            /* Kuning */
+            box-shadow: 0 5px 10px rgba(251, 188, 5, 0.3);
+            border: none;
         }
-        
+
         /* 4. ERROR (No Output / AI Failure) */
         #resultHeader.Error {
-            /* Teks disembunyikan, tapi kita pertahankan border/warna solid */
+            color: #fff;
+            background-color: var(--danger);
+            box-shadow: 0 5px 10px rgba(234, 67, 53, 0.4);
             border: none;
-            box-shadow: 0 5px 15px rgba(234, 67, 53, 0.5);
-            background-image: url('icons/error.svg');
+            background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
+            background-size: 400% 400%;
+            animation: gradientMove 8s ease infinite;
         }
 
         /* 5. DEFAULT (Ready State) */
         #resultHeader.Default {
-            /* Teks disembunyikan, tapi kita pertahankan border/warna solid */
-            border: none;
+            color: var(--neutral);
+            font-size: 17px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            background-image: url('icons/ready.svg');
+            background: linear-gradient(270deg, #1800ad, #7b68ee, var(--primary));
+            background-size: 400% 400%;
+            animation: gradientMove 8s ease infinite;
+            border: none;
+        }
+
+        /* Animasi gerak kanan-kiri */
+        @keyframes gradientMove {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         /* Ikon/Symbol: Dihapus total */
         .flag-symbol {
-            display: none; 
+            display: none;
         }
-        
+
         #claimDisplay {
             font-style: italic;
             font-family: 'AlteHaasGrotesk';
@@ -252,7 +305,7 @@
             background-color: var(--neutral);
             border-radius: var(--radius);
             text-align: justify;
-            font-size: 16px;
+            font-size: 14px;
         }
 
         #reasoningBox {
@@ -263,7 +316,7 @@
             margin-bottom: 15px;
             text-align: justify;
             font-size: 14px;
-            
+
         }
 
         #reasoningBox p {
@@ -278,7 +331,7 @@
             list-style: none;
             padding: 0;
             margin-top: 5px;
-            font-family:  'AlteHaasGrotesk';
+            font-family: 'AlteHaasGrotesk';
             font-weight: 500;
         }
 
@@ -318,7 +371,7 @@
             list-style: none;
             padding: 0;
             margin-top: 5px;
-            font-family:  'AlteHaasGrotesk';
+            font-family: 'AlteHaasGrotesk';
             font-weight: 500;
             text-align: left;
         }
@@ -610,7 +663,9 @@
         <div id="mainContent">
             <div id="topHeader">
                 <img src="icons/Veritas-Text.svg" alt="Veritas Text" class="topText">
-                <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="topLogo">
+                <div class="circleBox">
+                    <img src="icons/Veritas-LOGO.png" alt="Veritas Logo" class="topLogo">
+                </div>
             </div>
 
             <div id="tabNav">
