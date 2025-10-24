@@ -8,7 +8,7 @@ function getDisplayFlag(flag) {
         case 'HIJAU':
             return 'FACT';
         case 'MERAH':
-            return 'MISINFORMATION';
+            return 'FALSE';
         case 'KUNING':
             return 'CAUTION';
         case 'ERROR':
