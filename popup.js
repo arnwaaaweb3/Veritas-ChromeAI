@@ -117,10 +117,9 @@ function renderErrorState(flag, message) {
     const linkDiv = document.getElementById('linkBox');
 
     // MORTA FIX: Ambil teks display murni dari helper function
-    const displayHeaderText = getDisplayFlag(flag);
+    headerDiv.className = flag;
 
-    headerDiv.className = 'Error';
-    headerDiv.textContent = displayHeaderText;
+    headerDiv.textContent = getDisplayFlag(flag);
     claimDiv.textContent = 'Fact check failed completely.';
     reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Error Details:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`;
     linkDiv.innerHTML = '';

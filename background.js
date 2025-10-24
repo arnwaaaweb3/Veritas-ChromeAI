@@ -1,10 +1,21 @@
-// background.js (CLEAN V9: Summarizer Discarded - Focusing on Stable Cloud Hybrid)
+// background.js (CLEAN V10: Prompt Logic Extracted to prompt.js)
+
+import {
+    CLOUD_PROMPT_TEXT_ONLY,
+    CLOUD_PROMPT_MULTIMODAL,
+    LOCAL_PROMPT_PRE_PROCESS,
+    LOCAL_PROMPT_TEXT_FALLBACK,
+    LOCAL_PROMPT_MULTIMODAL_FALLBACK,
+    CLOUD_PROMPT_TEST_KEY
+} from './prompt.js';
 
 // --- LOCAL AI HELPER FUNCTIONS (START) ---
+// Checks if Chrome's built-in AI API is available on the user's device.
 function isLocalAiAvailable() {
     return (typeof chrome !== 'undefined' && typeof chrome.ai !== 'undefined');
 }
 
+// Uses local AI (Gemini Nano) to simplify a long claim into a concise, fact-checkable sentence.
 async function runLocalPreProcessing(claimText) {
     if (!isLocalAiAvailable()) {
         console.warn(
@@ -17,9 +28,9 @@ async function runLocalPreProcessing(claimText) {
         console.log(
             "[Veritas LocalAI] Starting local pre-processing using Prompt API."
         );
-        const localPrompt =
-            `Sederhanakan kalimat ini menjadi klaim satu baris yang paling mudah diverifikasi.
-        Fokus pada fakta inti: "${claimText}"`;
+        
+        // Uses imported prompt function
+        const localPrompt = LOCAL_PROMPT_PRE_PROCESS(claimText);
 
         const response = await chrome.ai.generateContent({
             model: 'text_model',
@@ -29,6 +40,7 @@ async function runLocalPreProcessing(claimText) {
 
         const simplifiedText = response.text.trim();
 
+        // Validate the simplified text is meaningful and not drastically larger
         if (simplifiedText && simplifiedText.length > 5 && simplifiedText.length < claimText.length * 1.5) {
             console.log(
                 "[Veritas LocalAI] Claim simplified:", simplifiedText
@@ -56,20 +68,23 @@ const MAX_HISTORY_ITEMS = 20;
 const API_CACHE = new Map();
 const MAX_CACHE_SIZE = 10;
 
+// Retrieves result from in-memory cache
 function getFromCache(claim) {
     const key = claim.trim().toLowerCase();
     return API_CACHE.get(key);
 }
 
+// Stores result in in-memory cache, removing the oldest item if the cache is full
 function setToCache(claim, result) {
     const key = claim.trim().toLowerCase();
     if (API_CACHE.size >= MAX_CACHE_SIZE) {
-        // Hapus item tertua
+        // Remove the oldest item
         API_CACHE.delete(API_CACHE.keys().next().value);
     }
     API_CACHE.set(key, result);
 }
 
+// Saves a successful fact-check result to Chrome local storage (History)
 async function saveFactCheckToHistory(result) {
     if (!result || result.flag === 'Error') return;
 
@@ -96,6 +111,7 @@ async function saveFactCheckToHistory(result) {
 
 
 // FUNCTION 1: SENDING RESULT TO POPUP
+// Stores the result and opens the extension popup
 function sendResultToPopup(result, isContextual = false) {
     chrome.storage.local.set({
         'lastFactCheckResult': result,
@@ -105,7 +121,7 @@ function sendResultToPopup(result, isContextual = false) {
     });
 }
 
-/// Sending Chrome Notification
+// Sends a standard Chrome notification upon completion/failure
 function sendFactCheckNotification(claimText, isSuccess) {
     const notificationId = 'veritas-fact-check-' + Date.now();
 
@@ -121,6 +137,7 @@ function sendFactCheckNotification(claimText, isSuccess) {
 }
 
 // V: NEW LISTENER: Clickable Notification
+// Listens for clicks on the notification to open the popup
 chrome.notifications.onClicked.addListener((notificationId) => {
     // Open extension popup when notification is clicked
     chrome.action.openPopup();
@@ -132,6 +149,7 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 // FUNCTION 2: CONTEXT MENU SETUP
 // ====================================================================
 
+// Creates context menus when the extension is installed
 chrome.runtime.onInstalled.addListener(() => {
     // Menu 1: Fact Check Text (Selection)
     chrome.contextMenus.create({
@@ -158,6 +176,7 @@ chrome.runtime.onInstalled.addListener(() => {
 // FUNCTION 3: MAIN CONTEXT MENU LISTENER (Right-Click) (PATCH: Retry Logic)
 // ====================================================================
 
+// Main listener for context menu clicks (right-click)
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
     const selectedText = info.selectionText;
@@ -240,7 +259,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 // ====================================================================
 // FUNCTION 4: LISTENER FOR UPLOAD FROM POPUP
-// ... (Remains unchanged)
+// Listener for messages from the popup (e.g., direct image upload)
 // ====================================================================
 
 chrome.runtime.onMessage.addListener(
@@ -271,23 +290,23 @@ chrome.runtime.onMessage.addListener(
                 sendResponse({ success: false, error: errorResult });
             });
 
-            return true;
+            return true; // Indicates an asynchronous response
         }
         if (request.action === 'testGeminiKey') {
             const apiKeyToTest = request.apiKey;
 
-            // Panggil logika test API
+            // Calls the API key test logic
             testGeminiKeyLogic(apiKeyToTest).then(response => {
                 sendResponse(response);
             });
-            return true; // Wajib return true untuk pesan asinkron
+            return true; // Indicates an asynchronous response
         }
     }
 );
 
 // ====================================================================
 // CORE FUNCTION: GEMINI API CALL (Cloud API Core Handler)
-// ... (Remains unchanged)
+// Handles communication with the Gemini Cloud API, including tool use (Google Search) and parsing.
 // ====================================================================
 async function executeGeminiCall(claim, contents) {
     const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
@@ -303,7 +322,7 @@ async function executeGeminiCall(claim, contents) {
 
     const payload = {
         contents: contents,
-        tools: [{ googleSearch: {} }]
+        tools: [{ googleSearch: {} }] // Enable Google Search Grounding
     };
 
     try {
@@ -324,7 +343,7 @@ async function executeGeminiCall(claim, contents) {
             const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim();
             const firstLine = aiResponse.split('\n')[0].trim().toUpperCase();
 
-            let flag = "Kuning";
+            let flag = "Kuning"; // Default is Caution (Kuning)
             const flagMatch = firstLine.match(/^(FACT|MISINFORMATION|CAUTION)/);
 
             if (flagMatch) {
@@ -340,13 +359,14 @@ async function executeGeminiCall(claim, contents) {
 
             // --- NEW FORMATTING LOGIC START ---
 
-            // Perhatian: Karena prompt sudah diperketat, kita bisa mengandalkan AI
+            // Strip the leading FLAG= prefix
             const reasonStart = aiResponse.replace(/^(FACT|MISINFORMATION|CAUTION)\s*(=)?\s*/i, '').trim();
+            // Assuming the reasoning text follows the flag prefix
             const parts = reasonStart.split('Reason:');
             const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : reasonStart;
 
 
-            // Link Grounding Logic (Tetap sama)
+            // Link Grounding Logic (Extraction from GroundingMetadata)
             const groundingMetadata = data.candidates[0].groundingMetadata;
             let linksOutput = "\nLink:\n- (No external sources detected)";
 
@@ -421,13 +441,12 @@ ${linksOutput}
 
 // ====================================================================
 // FUNCTION 5: RUN FACT CHECK HYBRID (TEXT ONLY) 
-// ... (Remains unchanged)
+// Handles the hybrid flow: Cache check -> Local AI Fallback/Pre-processing -> Cloud API call
 // ====================================================================
 
-// FUNCTION 5: RUN FACT CHECK HYBRID (TEXT ONLY) 
 async function runFactCheckHybrid(text) {
 
-    // --- MORTA CHECKPOINT 7.3: CHECK CACHE ---
+    // --- 1. CHECK CACHE ---
     const cachedResult = getFromCache(text);
     if (cachedResult) {
         console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
@@ -437,24 +456,20 @@ async function runFactCheckHybrid(text) {
     const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
     const geminiApiKey = resultStorage.geminiApiKey;
 
-    // --- 1. HANDLE NO API KEY / FALLBACK TO LOCAL AI (Unique Logic) ---
+    // --- 2. HANDLE NO API KEY / FALLBACK TO LOCAL AI (Unique Logic) ---
     if (!geminiApiKey) {
         if (isLocalAiAvailable()) {
             console.log(
                 "[Veritas Hybrid] Missing API Key. Performing verification using Local AI (On-Device)."
             );
 
-            // Perbaikan: Prompt lebih ketat
-            const localPrompt =
-                `You are Veritas AI, a fact-checking specialist. 
-            VERIFY this claim: "${text}", based on your internal knowledge. 
-            Respond with ONE KEYWORD at the start: 'FACT', 'MISINFORMATION', or 'CAUTION', followed by **one concise sentence** reasoning.
-            **The entire response must not exceed 60 words and must be in English.**`;
+            // Use imported prompt for local fallback
+            const localPrompt = LOCAL_PROMPT_TEXT_FALLBACK(text);
 
             const localResult = await chrome.ai.generateContent({
                 model: 'gemini-flash',
                 prompt: localPrompt,
-                config: { maxOutputTokens: 60 }, // Max token dikurangi drastis
+                config: { maxOutputTokens: 60 }, // Max token strictly reduced
             });
 
             const aiResponse = localResult.text.trim();
@@ -471,13 +486,13 @@ async function runFactCheckHybrid(text) {
                 claim: text
             };
 
-            // MORTA FIX: Set to Cache setelah local fallback berhasil
+            // Set to Cache after successful local fallback
             setToCache(text, finalResult);
             saveFactCheckToHistory(finalResult);
             return finalResult;
         }
 
-        // MORTA FIX: Jika Local AI juga tidak tersedia (sesuai hasil testingmu)
+        // If Local AI is also unavailable
         return {
             flag: "Error",
             message: "Gemini API Key is not set. Open Veritas Settings (right-click extension icon > Options) and save your API Key. (Local AI currently unavailable on this device.)",
@@ -485,23 +500,13 @@ async function runFactCheckHybrid(text) {
         };
     }
 
-    // --- 2. IF API KEY IS PRESENT: Use pipeline Local Pre-processing + executeGeminiCall ---
+    // --- 3. IF API KEY IS PRESENT: Use pipeline Local Pre-processing + executeGeminiCall ---
 
+    // Run local pre-processing first (simplifies the text claim)
     const processedText = await runLocalPreProcessing(text);
 
-    // Prompt Cloud (Dibuat lebih ketat untuk menghindari duplikasi)
-    const prompt =
-        `You are Veritas AI, a specialist in fact-checking. 
-    Your task is to VERIFY this claim: "${processedText}". 
-    Apply Reasoning: 
-    1) Deductive; 
-    2) Triangulation (comparing sources from Google Search). 
-    You MUST include the latest facts supporting your assessment. 
-    **Apply this Strict Output Format:** (1) ONE KEYWORD at the start ('FACT', 'MISINFORMATION', or 'CAUTION') followed by an equals sign (=); 
-    (2) Explain your reasoning in the format of **exactly THREE concise bullet points (-)**. 
-    **DO NOT ADD ANY EXTRA BULLET POINTS OR REPETITIVE SENTENCES.**
-    DO NOT INCLUDE ANY LINKS WITHIN THE REASONING TEXT.
-    Provide the entire response in English.`;
+    // Use imported cloud prompt
+    const prompt = CLOUD_PROMPT_TEXT_ONLY(processedText);
 
     console.log(
         "[Veritas Hybrid] Sending prompt to Gemini Cloud (with Google Search)..."
@@ -511,7 +516,7 @@ async function runFactCheckHybrid(text) {
 
     const result = await executeGeminiCall(text, contents);
 
-    // MORTA FIX: Set to Cache setelah cloud call berhasil
+    // Set to Cache after successful cloud call
     if (result.flag !== 'Error') {
         setToCache(text, result);
     }
@@ -521,7 +526,7 @@ async function runFactCheckHybrid(text) {
 
 // ====================================================================
 // FUNCTION 6: URL TO BASE64 UTILITY (For Multimodal URL)
-// ... (Remains unchanged)
+// Fetches an image URL and converts it to a Base64 string for API calls.
 // ====================================================================
 
 async function urlToBase64(url) {
@@ -531,7 +536,7 @@ async function urlToBase64(url) {
 
     const response = await fetch(url);
 
-    // V: Get MIME type from response header, fallback to image/jpeg
+    // Get MIME type from response header, fallback to image/jpeg
     const mimeType = response.headers.get('content-type') || 'image/jpeg';
 
     const blob = await response.blob();
@@ -541,7 +546,7 @@ async function urlToBase64(url) {
         reader.onloadend = () => {
             const base64String = reader.result;
             if (base64String) {
-                // V: Resolve with object including MIME type and base64
+                // Resolve with object including MIME type and base64 (splitting the data:mime/type;base64,)
                 resolve({
                     base64: base64String.split(',')[1],
                     mimeType: mimeType
@@ -557,10 +562,10 @@ async function urlToBase64(url) {
 
 // ====================================================================
 // FUNCTION 7: RUN FACT CHECK MULTIMODAL (via Right-Click URL)
-// ... (Remains unchanged)
+// Handles multimodal fact check triggered by right-clicking an image.
 // ====================================================================
 async function runFactCheckMultimodalUrl(imageUrl, text) {
-    // --- MORTA CHECKPOINT 7.3: CHECK CACHE ---
+    // --- CHECK CACHE ---
     const cachedResult = getFromCache(text);
     if (cachedResult) {
         console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
@@ -572,20 +577,17 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
         const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
         const geminiApiKey = resultStorage.geminiApiKey;
 
-        // 1. Konversi URL ke Base64 (Diperlukan untuk Local/Cloud)
+        // 1. Convert URL to Base64 (Required for Local/Cloud)
         const { base64: base64Image, mimeType } = await urlToBase64(imageUrl);
 
-        // --- MORTA FIX: LOCAL MULTIMODAL FALLBACK (PRIORITAS) ---
+        // --- LOCAL MULTIMODAL FALLBACK (PRIORITY) ---
         if (!geminiApiKey && isLocalAiAvailable()) {
             console.log("[Veritas Hybrid] Multimodal Cloud API Key missing. Falling back to Local AI.");
 
-            // Prompt Khusus Local Multimodal
-            const localPrompt =
-                `VERIFY claim: "${text}", based ONLY on the provided image and your internal knowledge. 
-            Respond with ONE KEYWORD: 'FACT', 'MISINFORMATION', or 'CAUTION', followed by clear reasoning. 
-            DO NOT USE GOOGLE SEARCH. Response must be concise and in English.`;
+            // Use imported prompt for Local Multimodal
+            const localPrompt = LOCAL_PROMPT_MULTIMODAL_FALLBACK(text);
 
-            // Panggil Local AI (Asumsi Local AI support Multimodal/InlineData)
+            // Call Local AI (Assuming Local AI supports Multimodal/InlineData)
             const localResult = await chrome.ai.generateContent({
                 model: 'gemini-flash',
                 prompt: localPrompt,
@@ -596,7 +598,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
                 ]
             });
 
-            // Parsing Hasil Local Fallback
+            // Parsing Local Fallback Result
             const aiResponse = localResult.text.trim();
             const upperResponse = aiResponse.toUpperCase();
             let flag = "Kuning";
@@ -604,20 +606,19 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             else if (upperResponse.startsWith("MISINFORMATION")) { flag = "Merah"; }
             else if (upperResponse.startsWith("CAUTION")) { flag = "Kuning"; }
 
-            // Tambahkan flag untuk identifikasi visual di History/Popup
+            // Add flag for visual identification in History/Popup
             const message = `${flag.toUpperCase()}=**"${text}"**\nReason:\n${aiResponse}\nLink:\n- [LOCAL AI FALLBACK: Cloud API Key Missing]`;
 
             const finalResult = { flag: flag, message: message, claim: text };
 
-            // MORTA FIX: Set to Cache setelah local fallback berhasil
+            // Set to Cache after successful local fallback
             setToCache(text, finalResult);
             saveFactCheckToHistory(finalResult);
             return finalResult;
         }
 
-        // --- CLOUD CALL (JIKA API KEY ADA) & TIDAK ADA FALLBACK ---
+        // --- CLOUD CALL ERROR (if API key is missing AND Local AI is unavailable) ---
         if (!geminiApiKey) {
-            // Ini akan terpicu jika API key tidak ada DAN Local AI tidak tersedia
             return {
                 flag: "Error",
                 message: "Gemini API Key is not set. Multimodal requires Cloud access, and Local AI is unavailable.",
@@ -625,7 +626,7 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
             };
         }
 
-        // Lanjut ke Multimodal Direct (menggunakan Cloud API)
+        // Proceed to Multimodal Direct (using Cloud API)
         return runFactCheckMultimodalDirect(base64Image, mimeType, text);
 
     } catch (error) {
@@ -640,11 +641,10 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 
 // ====================================================================
 // FUNCTION 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 from Upload/Other Functions)
-// ... (Remains unchanged)
+// Core function for multimodal fact checking using the Cloud API.
 // ====================================================================
-// FUNCTION 8: RUN FACT CHECK MULTIMODAL (DIRECT BASE64 from Upload/Other Functions)
 async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
-    // --- MORTA CHECKPOINT 7.3: CHECK CACHE ---
+    // --- CHECK CACHE ---
     const cachedResult = getFromCache(text);
     if (cachedResult) {
         console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
@@ -656,23 +656,12 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
     const geminiApiKey = resultStorage.geminiApiKey;
 
     if (!geminiApiKey) {
-        // MORTA FIX: Error message disederhanakan
+        // Simple error message for direct upload/call without key
         return { flag: "Error", message: "Gemini API Key is not set. Cloud access blocked.", claim: "Multimodal Check Failed" };
     }
 
-    // Prompt Cloud (Dibuat lebih ketat untuk menghindari duplikasi)
-    const promptText =
-        `You are Veritas AI, a specialist in fact-checking. 
-    Compare and VERIFY this claim: "${text}", with (1) the provided image and (2) external context from Google Search. 
-    Apply Reasoning: 
-    1) Deductive; 
-    2) Triangulation (comparing sources from Google Search). 
-    You MUST include the latest findings supporting your assessment. 
-    **Apply this Strict Output Format:** (1) ONE KEYWORD at the start ('FACT', 'MISINFORMATION', or 'CAUTION') followed by an equals sign (=); 
-    (2) Explain your reasoning in the format of **exactly THREE concise bullet points (-)**. 
-    **DO NOT ADD ANY EXTRA BULLET POINTS OR REPETITIVE SENTENCES.**
-    DO NOT INCLUDE ANY LINKS WITHIN THE REASONING TEXT.
-    Provide the entire response in English.`;
+    // Use imported cloud multimodal prompt
+    const promptText = CLOUD_PROMPT_MULTIMODAL(text);
 
     console.log(
         "[Veritas Upload] Sending Base64 Image and Prompt to Gemini Cloud (with Google Search)..."
@@ -695,7 +684,7 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
 
     const result = await executeGeminiCall(text, contents);
 
-    // MORTA FIX: Set to Cache setelah cloud call berhasil
+    // Set to Cache after successful cloud call
     if (result.flag !== 'Error') {
         setToCache(text, result);
     }
@@ -704,15 +693,17 @@ async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
 }
 
 // ====================================================================
-// FUNCTION 9: TEST API KEY LOGIC (DIPANGGIL DARI settings.js)
+// FUNCTION 9: TEST API KEY LOGIC (CALLED FROM settings.js)
+// Tests if the user's provided API key is valid.
 // ====================================================================
 async function testGeminiKeyLogic(apiKey) {
-    const testPrompt = "Test: Is 2+2=4? Respond ONLY with the keyword FACT.";
+    // Use imported test prompt
+    const testPrompt = CLOUD_PROMPT_TEST_KEY;
     const testContents = [{ role: "user", parts: [{ text: testPrompt }] }];
 
     const payload = {
         contents: testContents,
-        config: { maxOutputTokens: 10 } // Response sangat singkat
+        config: { maxOutputTokens: 10 } // Very short response token limit
     };
 
     try {
@@ -746,10 +737,10 @@ async function testGeminiKeyLogic(apiKey) {
     }
 }
 
-// Tambahkan Listener untuk Test Key dari settings.js
+// Listener for Test Key from settings.js
 chrome.runtime.onMessage.addListener(
     (request, sender, sendResponse) => {
-        // ... (Listener 'multimodalUpload' yang sudah ada) ...
+        // ... (Existing 'multimodalUpload' listener) ...
 
         if (request.action === 'testGeminiKey') {
             const apiKeyToTest = request.apiKey;
