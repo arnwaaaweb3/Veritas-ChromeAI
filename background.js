@@ -29,7 +29,7 @@ async function runLocalPreProcessing(claimText) {
             "[Veritas LocalAI] Starting local pre-processing using Prompt API."
         );
         
-        // Uses imported prompt function
+        // Use imported prompt function
         const localPrompt = LOCAL_PROMPT_PRE_PROCESS(claimText);
 
         const response = await chrome.ai.generateContent({
@@ -136,7 +136,7 @@ function sendFactCheckNotification(claimText, isSuccess) {
     });
 }
 
-// V: NEW LISTENER: Clickable Notification
+// NEW LISTENER: Clickable Notification
 // Listens for clicks on the notification to open the popup
 chrome.notifications.onClicked.addListener((notificationId) => {
     // Open extension popup when notification is clicked
@@ -208,7 +208,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             files: ['context_result.js']
         });
 
-        // V: Send loading update to the newly injected panel WITH RETRY (Fix Race Condition)
+        // Send loading update to the newly injected panel WITH RETRY (Fix Race Condition)
         for (let attempt = 0; attempt < 3; attempt++) {
             try {
                 await chrome.tabs.sendMessage(currentTabId, { action: 'finalResultUpdate', resultData: loadingResult });
@@ -239,7 +239,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         } else {
             // Run Multimodal API Call 
             const imageUrl = info.srcUrl;
-            const text = info.selectionText || "NO HIGHLIGHTED TEXT.";
+            // REMOVED AUTOPASTE CLAIM: Force user to input claim for multimodal checks
+            // The selected text is ignored here. We use a placeholder string.
+            const text = "USER_MUST_PROVIDE_CLAIM"; 
             result = await runFactCheckMultimodalUrl(imageUrl, text);
         }
 
@@ -248,7 +250,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             sendFactCheckNotification(selectedText, result.flag !== 'Error');
             chrome.storage.local.set({ 'lastFactCheckResult': result });
 
-            // ✅ Immediately update Floating Panel on the active tab
+            // Immediately update Floating Panel on the active tab
             chrome.tabs.sendMessage(currentTabId, {
                 action: 'finalResultUpdate',
                 resultData: result

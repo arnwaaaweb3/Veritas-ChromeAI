@@ -165,13 +165,6 @@ function getFactCheckResult() {
     chrome.storage.local.get(['lastFactCheckResult'], (storage) => {
         const result = storage.lastFactCheckResult;
 
-        // V: PATCH 2.6: Auto-Paste Highlighted Claim
-        const textClaimInput = document.getElementById('textClaimInput');
-        if (result && result.claim && textClaimInput && textClaimInput.value.trim() === '') {
-            // Only auto-paste if the input is empty
-            textClaimInput.value = result.claim;
-        }
-
         if (result && result.flag === 'loading') {
             renderLoadingState(resultOutputDiv, result.claim);
             return;
