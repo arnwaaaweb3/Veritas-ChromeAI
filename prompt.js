@@ -2,7 +2,7 @@
 
 // --- PROMPTS FOR CLOUD API (Gemini with Google Search) ---
 
-// Defining the three essential output categories clearly
+// Defining three essential category
 const FACT_CHECK_CRITERIA = `
 **STRICT CATEGORIES & DEFINITIONS:**
 A. FACT: The claim is predominantly true, verified by multiple, reputable sources, and not reliant on speculation. 

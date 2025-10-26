@@ -192,25 +192,28 @@
             padding: 15px 20px;
             border-radius: var(--radius);
             font-weight: 800;
-            font-size: 25px; /* Default size (akan di-override per kelas) */
+            font-size: 25px;
+            /* Default size (akan di-override per kelas) */
             font-family: 'ParaRegular';
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 15px;
-            letter-spacing: 0.2rem; /* Default spacing (akan di-override per kelas) */
+            letter-spacing: 0.2rem;
+            /* Default spacing (akan di-override per kelas) */
             text-indent: 0;
             white-space: normal;
             overflow: visible;
             transition: all 0.2s ease;
         }
-        
+
         /* MORTA FIX: Style untuk inner text yang akan di fade */
         #headerTextContent {
-            transition: opacity 0.2s ease; /* Hanya teks yang kena transisi opacity */
+            transition: opacity 0.2s ease;
+            /* Hanya teks yang kena transisi opacity */
             opacity: 1;
             /* Penting: Pastikan inner element bisa di-center di dalam parent flex */
-            display: flex; 
+            display: flex;
             align-items: center;
             justify-content: center;
             width: 100%;
@@ -231,7 +234,7 @@
             background-size: 400% 400%;
             animation: gradientMove 8s ease infinite;
             /* MORTA FIX: HARMONISASI FONT */
-            font-size: 16px; 
+            font-size: 16px;
             letter-spacing: 0.05rem;
         }
 
@@ -245,7 +248,7 @@
             background-size: 400% 400%;
             animation: gradientMove 8s ease infinite;
             /* MORTA FIX: HARMONISASI FONT */
-            font-size: 16px; 
+            font-size: 16px;
             letter-spacing: 0.05rem;
         }
 
@@ -258,7 +261,7 @@
             background-size: 400% 400%;
             animation: gradientMove 8s ease infinite;
             /* MORTA FIX: HARMONISASI FONT */
-            font-size: 16px; 
+            font-size: 16px;
             letter-spacing: 0.05rem;
         }
 
@@ -272,7 +275,7 @@
             background-size: 400% 400%;
             animation: gradientMove 8s ease infinite;
             /* MORTA FIX: HARMONISASI FONT */
-            font-size: 16px; 
+            font-size: 16px;
             letter-spacing: 0.05rem;
         }
 
@@ -372,6 +375,7 @@
             border-radius: var(--radius);
             border: 1px solid #ddd;
             font-size: 15px;
+            position: relative;
         }
 
         #linkBox p {
@@ -399,6 +403,29 @@
 
         #linkBox a {
             word-break: break-all;
+        }
+
+        #linkToggleButton {
+            border: none;
+            background: none;
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 5px;
+            padding: 2px 0;
+            display: block;
+            width: 100%;
+            text-align: right;
+            /* Taruh di pojok kanan */
+            transition: color 0.15s ease;
+            text-decoration: underline;
+            /* Kasih underline biar jelas itu bisa diklik */
+        }
+
+        #linkToggleButton:hover {
+            color: var(--text);
+            /* Berubah warna saat hover */
         }
 
         /* LOADING STATE */

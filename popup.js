@@ -98,7 +98,7 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     } 
     // =========================================================================================
 
-    // Parsing claim dari bolded text
+    // Parsing claim from highlighted claim
     const claimMatch = flagClaimRaw.match(/\*\*(.*?)\*\*/);
     claimDiv.textContent = claimMatch ? claimMatch[1] : claimText;
 
@@ -142,6 +142,34 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     }
     linksHTML += '</ul>';
     linkDiv.innerHTML = linksHTML;
+
+    // == MORTA FIX: Logic for Show More/Hide Less Button ==
+    if (linkLines.length > MAX_LINKS_VISIBLE) {
+        const listElement = linkDiv.querySelector('ul');
+        const listItems = listElement.querySelectorAll('li'); // All <li> elements
+        
+        const button = document.createElement('button');
+        button.id = 'linkToggleButton';
+        // Teks awal adalah "Show more (N more)"
+        button.textContent = `Show more (${linkLines.length - MAX_LINKS_VISIBLE} more)`;
+        
+        // Inject the button ke dalam linkBox
+        linkDiv.appendChild(button);
+
+        // Tambahkan click listener untuk toggle visibility
+        let isExpanded = false;
+        button.addEventListener('click', () => {
+            isExpanded = !isExpanded;
+            // Toggle display untuk item mulai dari index 3
+            for (let i = MAX_LINKS_VISIBLE; i < listItems.length; i++) {
+                listItems[i].style.display = isExpanded ? 'list-item' : 'none';
+            }
+            // Ubah teks tombol
+            button.textContent = isExpanded 
+                ? 'Hide less' 
+                : `Show more (${linkLines.length - MAX_LINKS_VISIBLE} more)`;
+        });
+    }
 }
 
 // Utility to render error (kept old structure for brevity)
