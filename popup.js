@@ -20,6 +20,15 @@ function getDisplayFlag(flag) {
     }
 }
 
+// Map untuk semua status Hover/Default
+const HOVER_TEXT_MAP = {
+    'Hijau': { default: 'FACT', hover: 'THIS CLAIM IS VERIFIED' },
+    'Merah': { default: 'FALSE', hover: 'THIS CLAIM IS UNVERIFIED' },
+    'Kuning': { default: 'CAUTION', hover: 'THIS CLAIM IS SUSPICIOUS' },
+    'Error': { default: 'ERROR', hover: 'SOMETHING WENT WRONG' },
+    'Default': { default: 'READY TO VERIFY', hover: 'CHECK YOUR CLAIMS NOW!' }
+};
+
 // Utility to parse Markdown results (according to the new format in background.js)
 function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const rawMessage = result.message;
@@ -35,6 +44,9 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     resultOutputDiv.style.display = 'block';
 
     const headerDiv = document.getElementById('resultHeader');
+    // MORTA FIX: Target inner element untuk manipulasi teks/fade
+    const headerTextContent = document.getElementById('headerTextContent'); 
+    
     const claimDiv = document.getElementById('claimDisplay');
     const reasonDiv = document.getElementById('reasoningBox');
     const linkDiv = document.getElementById('linkBox');
@@ -55,7 +67,36 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
 
     // Menetapkan class
     headerDiv.className = result.flag;
-    headerDiv.textContent = displayHeaderText;
+    headerTextContent.textContent = displayHeaderText; // CHANGED: Set text ke inner element
+
+    // == MORTA FIX: LOGIC HOVER UNIVERSAL (untuk Hijau, Merah, Kuning, Error) ==
+    // 1. Hapus listener lama (best practice)
+    headerDiv.onmouseover = null;
+    headerDiv.onmouseout = null; 
+
+    if (HOVER_TEXT_MAP[result.flag]) {
+        const { default: defaultText, hover: hoverText } = HOVER_TEXT_MAP[result.flag];
+        const fadeDuration = 200; // Matching CSS transition duration
+
+        // 2. Mouse Over: Fade out -> Change text -> Fade in
+        headerDiv.onmouseover = () => {
+            headerTextContent.style.opacity = 0; // Target inner element
+            setTimeout(() => {
+                headerTextContent.textContent = hoverText; // Target inner element
+                headerTextContent.style.opacity = 1; // Target inner element
+            }, fadeDuration);
+        };
+
+        // 3. Mouse Out: Fade out -> Change text -> Fade in
+        headerDiv.onmouseout = () => {
+            headerTextContent.style.opacity = 0; // Target inner element
+            setTimeout(() => {
+                headerTextContent.textContent = defaultText; // Target inner element
+                headerTextContent.style.opacity = 1; // Target inner element
+            }, fadeDuration);
+        };
+    } 
+    // =========================================================================================
 
     // Parsing claim dari bolded text
     const claimMatch = flagClaimRaw.match(/\*\*(.*?)\*\*/);
@@ -112,6 +153,9 @@ function renderErrorState(flag, message) {
     outputDiv.style.display = 'block';
 
     const headerDiv = document.getElementById('resultHeader');
+    // MORTA FIX: Target inner element
+    const headerTextContent = document.getElementById('headerTextContent');
+    
     const claimDiv = document.getElementById('claimDisplay');
     const reasonDiv = document.getElementById('reasoningBox');
     const linkDiv = document.getElementById('linkBox');
@@ -119,7 +163,7 @@ function renderErrorState(flag, message) {
     // MORTA FIX: Ambil teks display murni dari helper function
     headerDiv.className = flag;
 
-    headerDiv.textContent = getDisplayFlag(flag);
+    headerTextContent.textContent = getDisplayFlag(flag); // CHANGED: Set text ke inner element
     claimDiv.textContent = 'Fact check failed completely.';
     reasonDiv.innerHTML = `<p style="color:red; font-weight:bold;">Error Details:</p><pre style="white-space: pre-wrap; font-size:12px;">${message}</pre>`;
     linkDiv.innerHTML = '';
@@ -180,12 +224,38 @@ function getFactCheckResult() {
         resultOutputDiv.style.display = 'block';
 
         const headerDiv = document.getElementById('resultHeader');
+        // MORTA FIX: Target inner element
+        const headerTextContent = document.getElementById('headerTextContent'); 
+        
         headerDiv.className = 'Default';
         // MORTA FIX: Hanya memasukkan teks murni
-        headerDiv.textContent = getDisplayFlag('DEFAULT');
+        const defaultText = HOVER_TEXT_MAP['Default'].default;
+        headerTextContent.textContent = defaultText; // CHANGED: Set text ke inner element
+        
         document.getElementById('claimDisplay').textContent = 'Ready for a New Fact Check.';
         document.getElementById('reasoningBox').innerHTML = `<p>Instructions:</p><ul><li>Highlight text & right-click (Fact Check Text/Image).</li><li>Or, use the upload feature below.</li></ul>`;
         document.getElementById('linkBox').innerHTML = '';
+        
+        // == MORTA FIX: Tambahkan logic hover untuk Flag DEFAULT ==
+        const hoverText = HOVER_TEXT_MAP['Default'].hover;
+        const fadeDuration = 200;
+
+        headerDiv.onmouseover = () => {
+            headerTextContent.style.opacity = 0;
+            setTimeout(() => {
+                headerTextContent.textContent = hoverText;
+                headerTextContent.style.opacity = 1;
+            }, fadeDuration);
+        };
+
+        headerDiv.onmouseout = () => {
+            headerTextContent.style.opacity = 0;
+            setTimeout(() => {
+                headerTextContent.textContent = defaultText;
+                headerTextContent.style.opacity = 1;
+            }, fadeDuration);
+        };
+        // ========================================================
 
     });
 }

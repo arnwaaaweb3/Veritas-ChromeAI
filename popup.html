@@ -192,17 +192,29 @@
             padding: 15px 20px;
             border-radius: var(--radius);
             font-weight: 800;
-            font-size: 25px;
+            font-size: 25px; /* Default size (akan di-override per kelas) */
             font-family: 'ParaRegular';
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 15px;
-            letter-spacing: 0.2rem;
+            letter-spacing: 0.2rem; /* Default spacing (akan di-override per kelas) */
             text-indent: 0;
             white-space: normal;
             overflow: visible;
             transition: all 0.2s ease;
+        }
+        
+        /* MORTA FIX: Style untuk inner text yang akan di fade */
+        #headerTextContent {
+            transition: opacity 0.2s ease; /* Hanya teks yang kena transisi opacity */
+            opacity: 1;
+            /* Penting: Pastikan inner element bisa di-center di dalam parent flex */
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
         }
 
         /* ---------------------------------------------------- */
@@ -218,6 +230,9 @@
             background: linear-gradient(270deg, #34A853, #7ee071, #34A853);
             background-size: 400% 400%;
             animation: gradientMove 8s ease infinite;
+            /* MORTA FIX: HARMONISASI FONT */
+            font-size: 16px; 
+            letter-spacing: 0.05rem;
         }
 
         /* 2. MERAH (Misinformation / False) */
@@ -229,6 +244,9 @@
             background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
             background-size: 400% 400%;
             animation: gradientMove 8s ease infinite;
+            /* MORTA FIX: HARMONISASI FONT */
+            font-size: 16px; 
+            letter-spacing: 0.05rem;
         }
 
         /* 3. KUNING (Warning / Caution) */
@@ -239,6 +257,9 @@
             background: linear-gradient(270deg, #ffb300, #ff8c00, #ffd54f, #ffb300);
             background-size: 400% 400%;
             animation: gradientMove 8s ease infinite;
+            /* MORTA FIX: HARMONISASI FONT */
+            font-size: 16px; 
+            letter-spacing: 0.05rem;
         }
 
         /* 4. ERROR (No Output / AI Failure) */
@@ -250,17 +271,22 @@
             background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
             background-size: 400% 400%;
             animation: gradientMove 8s ease infinite;
+            /* MORTA FIX: HARMONISASI FONT */
+            font-size: 16px; 
+            letter-spacing: 0.05rem;
         }
 
         /* 5. DEFAULT (Ready State) */
         #resultHeader.Default {
             color: var(--neutral);
-            font-size: 17px;
+            font-size: 16px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             background: linear-gradient(270deg, #1800ad, #7b68ee, var(--primary));
             background-size: 400% 400%;
             animation: gradientMove 8s ease infinite;
             border: none;
+            /* MORTA FIX: HARMONISASI FONT */
+            letter-spacing: 0.05rem;
         }
 
         /* Animasi gerak kanan-kiri */
@@ -285,10 +311,10 @@
 
         #claimDisplay {
             font-style: italic;
-            font-family: 'ParaRegular';
+            font-family: sans-serif;
             margin: 10px 0 15px;
             padding: 10px;
-            color: #1800ad;
+            color: #000000;
             letter-spacing: 0.5px;
             background-color: var(--neutral);
             border-radius: var(--radius);
@@ -319,9 +345,9 @@
             list-style: none;
             padding: 0;
             margin-top: 5px;
-            font-family: 'ParaRegular';
-            color: #1800ad;
-            letter-spacing: 1px;
+            font-family: sans-serif;
+            color: #000000;
+            letter-spacing: 0.5px;
         }
 
         #reasoningBox li {
@@ -360,10 +386,10 @@
             list-style: none;
             padding: 0;
             margin-top: 5px;
-            color: #1800ad;
-            font-family: 'ParaRegular';
+            color: #000000;
+            font-family: sans-serif;
             font-weight: 500;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
             text-align: left;
         }
 
@@ -671,7 +697,7 @@
                     </div>
 
                     <div id="resultOutput" style="display:none;">
-                        <div id="resultHeader"></div>
+                        <div id="resultHeader"><span id="headerTextContent"></span></div>
                         <div id="claimDisplay"></div>
                         <div id="reasoningBox"></div>
                         <div id="linkBox"></div>
