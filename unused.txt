@@ -1,7 +1,14 @@
-<div id="uploadSection">
+
+<div id="uploadSection" style="display:none;">
                         <h4>Fact Check Local Image:</h4>
                         <textarea id="textClaimInput" placeholder="Enter claim related to the image..."></textarea>
                         <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
                         <button id="submitUploadButton">Analyze Image</button>
                         <div id="uploadStatus"></div>
                     </div>
+
+                    <div id="urlCheckSection" style="display:none; padding: 12px; margin-top: 18px; background: rgba(240, 240, 255, 0.9); border-radius: var(--radius); text-align: center;">
+                        <h4 style="color: var(--primary); font-size: 20px; margin-bottom: 5px;">URL Fact Check</h4>
+                        <p style="font-size: 15px; color: #666;">**Feature Coming Soon!** Currently not available in the MVP.</p>
+                    </div>
+                </div>

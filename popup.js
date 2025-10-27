@@ -1,5 +1,3 @@
-// [File popup.js tetap sama dengan versi clean sebelumnya, namun sekarang setupNavigationHub() akan bekerja dengan tombol vertikal baru.]
-
 document.addEventListener('DOMContentLoaded', initializePopup);
 
 const HISTORY_KEY = 'veritasHistory'; // Declaration of HISTORY_KEY
@@ -37,31 +35,34 @@ const HOVER_TEXT_MAP = {
 
 // Function to show the selected view and hide others
 function showView(viewName) {
-    // 1. Sembunyikan semua kontainer fungsionalitas
+    // 1. Sembunyikan semua kontainer fungsionalitas (Bersih-bersih)
     document.getElementById('resultOutput').style.display = 'none';
     document.getElementById('uploadSection').style.display = 'none';
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('navigationHub').style.display = 'none'; 
+    
     const urlCheckDiv = document.getElementById('urlCheckSection');
     if (urlCheckDiv) urlCheckDiv.style.display = 'none';
     
-    // Pastikan Navigation Hub disembunyikan saat beralih ke fitur
-    document.getElementById('navigationHub').style.display = 'none'; 
+    const textCheckDiv = document.getElementById('textCheckSection'); // NEW Text-Only Div
+    if (textCheckDiv) textCheckDiv.style.display = 'none'; 
 
     // 2. Tentukan view mana yang akan ditampilkan
     if (viewName === 'textCheck') {
-        // Text/Claim: Menampilkan result output (Default State) + Upload Form (Text area dapat digunakan)
+        // Text-Only Check: Menampilkan result output (Default State) + Text Input BARU
         document.getElementById('resultOutput').style.display = 'block';
-        document.getElementById('uploadSection').style.display = 'block';
-        // Memaksa header ke default state (READY) karena user mulai dari hub
+        if (textCheckDiv) textCheckDiv.style.display = 'block'; 
         getFactCheckResult(true); 
     } else if (viewName === 'imageCheck') {
-        // Image Check: Menampilkan form upload (uploadSection)
-        document.getElementById('resultOutput').style.display = 'none'; // Sembunyikan hasil sebelumnya
-        document.getElementById('uploadSection').style.display = 'block'; 
+        // Image Check: Menampilkan result output (Default State) + Multimodal Input LAMA
+        document.getElementById('resultOutput').style.display = 'block'; 
+        document.getElementById('uploadSection').style.display = 'block'; // Show EXISTING multimodal section
+        getFactCheckResult(true);
     } else if (viewName === 'urlCheck') {
-        // URL Check: Menampilkan container placeholder baru
+        // URL Check: Menampilkan result output (Default State) + container placeholder baru
+        document.getElementById('resultOutput').style.display = 'block'; 
         if (urlCheckDiv) urlCheckDiv.style.display = 'block';
-        document.getElementById('uploadSection').style.display = 'none'; // Sembunyikan form upload
-        document.getElementById('resultOutput').style.display = 'none'; 
+        getFactCheckResult(true);
     } else {
         // Default (kembali ke hub)
         document.getElementById('navigationHub').style.display = 'block';
@@ -112,9 +113,13 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     document.getElementById('loadingState').style.display = 'none';
     resultOutputDiv.style.display = 'block';
 
-    // MORTA FIX: Sembunyikan Navigation Hub jika ada result
+    // MORTA FIX: Sembunyikan Hub, pastikan section yang tidak terpakai disembunyikan
     document.getElementById('navigationHub').style.display = 'none';
-    document.getElementById('uploadSection').style.display = 'block'; // Pastikan upload terlihat
+    document.getElementById('uploadSection').style.display = 'block'; 
+    const urlCheckDiv = document.getElementById('urlCheckSection');
+    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
+    const textCheckDiv = document.getElementById('textCheckSection');
+    if (textCheckDiv) textCheckDiv.style.display = 'none';
 
     const headerDiv = document.getElementById('resultHeader');
     // MORTA FIX: Target inner element untuk manipulasi teks/fade
@@ -259,9 +264,14 @@ function renderErrorState(flag, message) {
     loadingDiv.style.display = 'none';
     outputDiv.style.display = 'block';
 
-    // MORTA FIX: Sembunyikan Navigation Hub
+    // MORTA FIX: Sembunyikan semua kecuali result
     document.getElementById('navigationHub').style.display = 'none';
-    document.getElementById('uploadSection').style.display = 'block'; // Pastikan upload terlihat
+    document.getElementById('uploadSection').style.display = 'block'; 
+    const urlCheckDiv = document.getElementById('urlCheckSection');
+    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
+    const textCheckDiv = document.getElementById('textCheckSection');
+    if (textCheckDiv) textCheckDiv.style.display = 'none';
+
 
     const headerDiv = document.getElementById('resultHeader');
     // MORTA FIX: Target inner element
@@ -290,11 +300,14 @@ function renderLoadingState(resultBox, claim) {
     // Ensure Fact Check tab is visible during loading
     factCheckTab.style.display = 'block';
 
-    // MORTA FIX: Sembunyikan Navigation Hub dan Upload/URL Section
+    // MORTA FIX: Sembunyikan semua kecuali loading
     document.getElementById('navigationHub').style.display = 'none';
-    document.getElementById('uploadSection').style.display = 'block'; 
+    document.getElementById('uploadSection').style.display = 'none'; 
     const urlCheckDiv = document.getElementById('urlCheckSection');
     if (urlCheckDiv) urlCheckDiv.style.display = 'none';
+    document.getElementById('resultOutput').style.display = 'none';
+    const textCheckDiv = document.getElementById('textCheckSection');
+    if (textCheckDiv) textCheckDiv.style.display = 'none';
 
 
     outputDiv.style.display = 'none';
@@ -319,7 +332,7 @@ function handleLiveResultUpdate(request, sender, sendResponse) {
 }
 
 // ✅ Get result from storage (e.g., when popup is newly opened)
-function getFactCheckResult() {
+function getFactCheckResult(forceDefault = false) { 
     const resultOutputDiv = document.getElementById('resultOutput');
     
     // Sembunyikan semua kontainer fungsionalitas
@@ -327,6 +340,8 @@ function getFactCheckResult() {
     document.getElementById('uploadSection').style.display = 'none';
     const urlCheckDiv = document.getElementById('urlCheckSection');
     if (urlCheckDiv) urlCheckDiv.style.display = 'none';
+    const textCheckDiv = document.getElementById('textCheckSection');
+    if (textCheckDiv) textCheckDiv.style.display = 'none';
 
     chrome.storage.local.get(['lastFactCheckResult'], (storage) => {
         const result = storage.lastFactCheckResult;
@@ -336,7 +351,7 @@ function getFactCheckResult() {
             return;
         }
 
-        if (result && result.message) {
+        if (result && result.message && !forceDefault) { 
             // Jika ada result, tampilkan result dan upload section
             document.getElementById('navigationHub').style.display = 'none';
             document.getElementById('uploadSection').style.display = 'block';
@@ -344,7 +359,7 @@ function getFactCheckResult() {
             return;
         }
 
-        // Default state if no result (Tampilkan Navigation Hub)
+        // Default state if no result OR if forceDefault is true (Tampilkan Navigation Hub)
         document.getElementById('loadingState').style.display = 'none';
         
         // MORTA FIX: Tampilkan Navigation Hub
@@ -569,6 +584,52 @@ function readFileAsBase64(file) {
     });
 }
 
+// MORTA FIX: Function baru untuk mengirim TEXT-ONLY CLAIM
+function setupTextCheckListener() {
+    const textInput = document.getElementById('textClaimInputOnly');
+    const submitButton = document.getElementById('submitTextButton');
+    const statusDiv = document.getElementById('textStatus');
+    
+    if (!submitButton) return;
+
+    submitButton.addEventListener('click', () => {
+        const textClaim = textInput.value.trim();
+
+        if (textClaim.length < 5) {
+            statusDiv.textContent = '❌ Claim must be at least 5 characters.';
+            statusDiv.style.color = 'red';
+            return;
+        }
+
+        submitButton.disabled = true;
+        textInput.disabled = true;
+
+        statusDiv.textContent = '⏳ Sending text claim for verification...';
+        statusDiv.style.color = 'blue';
+
+        // Mengirim aksi BARU: 'textOnlyFactCheck' ke background.js
+        chrome.runtime.sendMessage({
+            action: 'textOnlyFactCheck', 
+            claim: textClaim
+        }, (response) => {
+            submitButton.disabled = false;
+            textInput.disabled = false;
+            // Status akan di-update oleh listener result di handleLiveResultUpdate
+            if (!response || !response.success) {
+                // Hanya jika terjadi error komunikasi (bukan error API)
+                statusDiv.textContent = '❌ Analysis Initiated, but failed to connect.';
+                statusDiv.style.color = 'red';
+            } else {
+                statusDiv.textContent = '';
+            }
+        });
+
+        // Show loading state immediately in the main result output
+        renderLoadingState(document.getElementById('resultOutput'), textClaim);
+    });
+}
+
+
 function setupWelcomeMessage() {
     const welcomeTextContainer = document.querySelector('.welcomeText');
     const closeButton = document.getElementById('closeWelcome');
@@ -660,7 +721,9 @@ function initializePopup() {
 
     setupNavigationHub(); 
     setupWelcomeMessage();
-
+    setupUploadListener();
+    setupTextCheckListener(); // Panggil handler baru
+    
     document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 
 }

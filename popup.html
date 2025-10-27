@@ -167,7 +167,8 @@
             inset: 0;
             display: flex;
             flex-direction: column;
-            padding: 16px 16px 40px 16px;
+            /* MORTA FIX: Padding 40px di bawah untuk breathing space */
+            padding: 16px 16px 40px 16px; 
             opacity: 0;
             transform: translateY(10px);
             transition: opacity 0.8s ease, transform 0.8s ease;
@@ -473,8 +474,18 @@
             background: rgba(255, 255, 255, 0.9);
             border-radius: var(--radius);
         }
-
-        textarea {
+        
+        /* MORTA FIX: Text Check Section Style */
+        #textCheckSection {
+            margin-top: 18px;
+            padding: 12px 12px 0 12px; /* Disesuaikan agar tombol menempel di padding bawah maincontent */
+            background: rgba(240, 240, 255, 0.9);
+            border-radius: var(--radius);
+        }
+        
+        /* MORTA FIX: CSS untuk textarea dan input harus berlaku untuk semua section input */
+        #textCheckSection textarea,
+        #uploadSection textarea {
             width: 100%;
             height: 70px;
             resize: none;
@@ -485,6 +496,20 @@
             box-sizing: border-box;
             margin-bottom: 8px;
         }
+
+        /* MORTA FIX: CSS untuk tombol di TextCheckSection */
+        #textCheckSection button {
+            background: var(--primary);
+            color: #fff;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px; /* Margin bawah untuk memisahkan dari bottom padding mainContent */
+        }
+
+        #textCheckSection button:hover {
+            background: #3367d6;
+        }
+
 
         input[type="file"] {
             width: 100%;
@@ -692,6 +717,7 @@
             margin-bottom: 20px;
             background-color: transparent;
             background-size: 100% 100%;
+            /* Scaling gambar 960x540px agar pas */
             background-position: center;
             background-repeat: no-repeat;
             color: transparent;
@@ -701,7 +727,8 @@
 
         /* Hover State - Gambar akan diganti oleh JS */
         .nav-button:hover {
-            transform: scale(1.02); 
+            transform: scale(1.02);
+            /* Efek zoom tipis */
             box-shadow: 0 4px 8px rgba(24, 0, 173, 0.2);
         }
 
@@ -763,6 +790,7 @@
 
             <div id="tabContent">
                 <div id="factCheckTab">
+                    
                     <div id="navigationHub" style="display:none; padding-top: 2.5px;">
                         <div class="welcomeText">
                             <button id="closeWelcome"
@@ -775,7 +803,7 @@
                         
                         <div style="text-align: center; margin-top: 25px;">
                             <h4 style="font-size: 15px; color: var(--primary); letter-spacing: 1px;">To get started, select the option down below:</h4>
-                            <div id="navButtonsContainer" style=" flex-direction: column; gap: 10px; margin-top: 20px;">
+                            <div id="navButtonsContainer" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
                                 <button id="btnText" class="nav-button" data-icon="txtIcon.png" data-hover-icon="txtHover.png" data-target-view="textCheck">
                                     Text
                                 </button>
@@ -796,15 +824,22 @@
                     </div>
 
                     <div id="resultOutput" style="display:none;">
-                        <div id="resultHeader"><span id="headerTextContent"></span></div>
                         <div id="claimDisplay"></div>
                         <div id="reasoningBox"></div>
                         <div id="linkBox"></div>
                     </div>
 
-                    <div id="uploadSection">
-                        <h4>Fact Check Local Image:</h4>
-                        <textarea id="textClaimInput" placeholder="Enter claim related to the image..."></textarea>
+                    <div id="textCheckSection" style="display:none;">
+                        <h4 style="color: var(--primary); font-size: 18px; margin-bottom: 5px;">Input Claim for Fact Check:</h4>
+                        <textarea id="textClaimInputOnly" placeholder="Enter the full claim you want to verify here..."></textarea>
+                        <button id="submitTextButton">Verify Claim</button>
+                        <div id="textStatus" style="font-size: 13px; margin-top: 5px;"></div>
+                    </div>
+
+
+                    <div id="uploadSection" style="display:none;">
+                        <h4 style="color: var(--primary); font-size: 18px;">Fact Check Image + Context:</h4>
+                        <textarea id="textClaimInput" placeholder="Enter claim related to the image... (Contextual Text)"></textarea>
                         <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
                         <button id="submitUploadButton">Analyze Image</button>
                         <div id="uploadStatus"></div>
@@ -814,6 +849,7 @@
                         <h4 style="color: var(--primary); font-size: 20px; margin-bottom: 5px;">URL Fact Check</h4>
                         <p style="font-size: 15px; color: #666;">**Feature Coming Soon!** Currently not available in the MVP.</p>
                     </div>
+
                 </div>
 
                 <div id="historyTab" style="display:none; padding-top: 10px;">
@@ -827,5 +863,4 @@
 
     <script src="popup.js"></script>
 </body>
-
 </html>
