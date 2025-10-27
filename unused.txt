@@ -1,0 +1,7 @@
+<div id="uploadSection">
+                        <h4>Fact Check Local Image:</h4>
+                        <textarea id="textClaimInput" placeholder="Enter claim related to the image..."></textarea>
+                        <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
+                        <button id="submitUploadButton">Analyze Image</button>
+                        <div id="uploadStatus"></div>
+                    </div>

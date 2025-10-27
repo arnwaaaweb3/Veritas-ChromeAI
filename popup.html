@@ -205,6 +205,8 @@
             white-space: normal;
             overflow: visible;
             transition: all 0.2s ease;
+            /* MORTA FIX: Tambahkan border tipis di sini */
+            border: 1.5px solid #1800ad;
         }
 
         /* MORTA FIX: Style untuk inner text yang akan di fade */
@@ -229,10 +231,10 @@
             color: #fff;
             font-weight: 800;
             box-shadow: 0 5px 10px rgba(52, 168, 83, 0.4);
-            border: none;
+            /* border: none; <--- Hapus atau pastikan tidak ada, agar border utama terlihat */
             background: linear-gradient(270deg, #34A853, #7ee071, #34A853);
             background-size: 400% 400%;
-            animation: gradientMove 8s ease infinite;
+            animation: gradientMove 20s ease infinite;
             /* MORTA FIX: HARMONISASI FONT */
             font-size: 16px;
             letter-spacing: 0.05rem;
@@ -243,10 +245,10 @@
             color: #fff;
             background-color: var(--danger);
             box-shadow: 0 5px 10px rgba(234, 67, 53, 0.4);
-            border: none;
+            /* border: none; <--- Hapus atau pastikan tidak ada */
             background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
             background-size: 400% 400%;
-            animation: gradientMove 8s ease infinite;
+            animation: gradientMove 20s ease infinite;
             /* MORTA FIX: HARMONISASI FONT */
             font-size: 16px;
             letter-spacing: 0.05rem;
@@ -256,10 +258,10 @@
         #resultHeader.Kuning {
             color: var(--text);
             box-shadow: 0 5px 10px rgba(251, 188, 5, 0.3);
-            border: none;
+            /* border: none; <--- Hapus atau pastikan tidak ada */
             background: linear-gradient(270deg, #ffb300, #ff8c00, #ffd54f, #ffb300);
             background-size: 400% 400%;
-            animation: gradientMove 8s ease infinite;
+            animation: gradientMove 20s ease infinite;
             /* MORTA FIX: HARMONISASI FONT */
             font-size: 16px;
             letter-spacing: 0.05rem;
@@ -270,11 +272,10 @@
             color: #fff;
             background-color: var(--danger);
             box-shadow: 0 5px 10px rgba(234, 67, 53, 0.4);
-            border: none;
+            /* border: none; <--- Hapus atau pastikan tidak ada */
             background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
             background-size: 400% 400%;
-            animation: gradientMove 8s ease infinite;
-            /* MORTA FIX: HARMONISASI FONT */
+            animation: gradientMove 20s ease infinite;
             font-size: 16px;
             letter-spacing: 0.05rem;
         }
@@ -286,9 +287,8 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             background: linear-gradient(270deg, #1800ad, #7b68ee, var(--primary));
             background-size: 400% 400%;
-            animation: gradientMove 8s ease infinite;
-            border: none;
-            /* MORTA FIX: HARMONISASI FONT */
+            animation: gradientMove 20s ease infinite;
+            /* border: none; <--- Hapus atau pastikan tidak ada */
             letter-spacing: 0.05rem;
         }
 
@@ -317,9 +317,9 @@
             font-family: sans-serif;
             margin: 10px 0 15px;
             padding: 10px;
-            color: #000000;
+            color: #1800ad;
             letter-spacing: 0.5px;
-            background-color: var(--neutral);
+            background-color: #ffffff;
             border-radius: var(--radius);
             text-align: justify;
             font-size: 15px;
@@ -327,7 +327,7 @@
 
         #reasoningBox {
             padding: 12px;
-            background: #fff;
+            background: #ffffff;
             border-radius: var(--radius);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
             margin-bottom: 15px;
@@ -349,7 +349,8 @@
             padding: 0;
             margin-top: 5px;
             font-family: sans-serif;
-            color: #000000;
+            color: #1800ad;
+            font-style: italic;
             letter-spacing: 0.5px;
         }
 
@@ -371,7 +372,7 @@
 
         #linkBox {
             padding: 12px;
-            background-color: #f7f7f7;
+            background-color: #ffffff;
             border-radius: var(--radius);
             border: 1px solid #ddd;
             font-size: 15px;
@@ -408,8 +409,8 @@
         #linkToggleButton {
             border: none;
             background: none;
-            color: var(--primary);
-            font-size: 13px;
+            color: #1800ad;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
             margin-top: 5px;
@@ -424,8 +425,7 @@
         }
 
         #linkToggleButton:hover {
-            color: var(--text);
-            /* Berubah warna saat hover */
+            color: #000000;
         }
 
         /* LOADING STATE */
@@ -717,6 +717,13 @@
 
             <div id="tabContent">
                 <div id="factCheckTab">
+                    <div id="navigationHub" style="display:none; padding-top: 50px; text-align: center; height: 350px;">
+                        <h4 style="font-size: 20px; color: var(--primary);">Welcome to Veritas AI
+                            
+                        </h4>
+                        <p style="color: #444; font-size: 14px;">Select an option above to begin checking your claims.</p>
+                    </div>
+
                     <div id="loadingState" style="display:none; margin-top: 20px;">
                         <div class="spinner"></div>
                         <p><strong>Verifying claim...</strong></p>

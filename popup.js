@@ -43,6 +43,10 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     document.getElementById('loadingState').style.display = 'none';
     resultOutputDiv.style.display = 'block';
 
+    // MORTA FIX: Sembunyikan Navigation Hub jika ada result
+    document.getElementById('navigationHub').style.display = 'none';
+    document.getElementById('uploadSection').style.display = 'block'; // Pastikan upload terlihat
+
     const headerDiv = document.getElementById('resultHeader');
     // MORTA FIX: Target inner element untuk manipulasi teks/fade
     const headerTextContent = document.getElementById('headerTextContent'); 
@@ -124,16 +128,21 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     let linksHTML = '<p>Link:</p><ul>';
     const linkLines = rawLinks.split('\n').filter(line => line.startsWith('-'));
     const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+    const MAX_LINKS_VISIBLE = 3; 
 
     if (linkLines.length > 0) {
-        linkLines.forEach(line => {
+        linkLines.forEach((line, index) => { // <-- FIX 2: Tambah index untuk hitung dan sembunyikan
+            // Logika untuk menyembunyikan item > MAX_LINKS_VISIBLE
+            const isHidden = index >= MAX_LINKS_VISIBLE;
+            const hiddenStyle = isHidden ? ' style="display: none;"' : ''; 
+
             const linkMatch = linkRegex.exec(line);
             if (linkMatch && linkMatch.length >= 3) {
                 // LinkMatch[1] = title, LinkMatch[2] = URL
-                linksHTML += `<li><a href="${linkMatch[2]}" target="_blank">${linkMatch[1]}</a></li>`;
+                linksHTML += `<li${hiddenStyle}><a href="${linkMatch[2]}" target="_blank">${linkMatch[1]}</a></li>`;
             } else {
                 // If link format fails, display as plain text
-                linksHTML += `<li>${line.substring(1).trim()}</li>`;
+                linksHTML += `<li${hiddenStyle}>${line.substring(1).trim()}</li>`;
             }
             linkRegex.lastIndex = 0; // Reset regex index
         });
@@ -144,9 +153,10 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     linkDiv.innerHTML = linksHTML;
 
     // == MORTA FIX: Logic for Show More/Hide Less Button ==
+    // Hanya tampilkan tombol jika jumlah link lebih dari batas yang terlihat
     if (linkLines.length > MAX_LINKS_VISIBLE) {
         const listElement = linkDiv.querySelector('ul');
-        const listItems = listElement.querySelectorAll('li'); // All <li> elements
+        const listItems = listElement.querySelectorAll('li'); // Semua <li> elements
         
         const button = document.createElement('button');
         button.id = 'linkToggleButton';
@@ -160,7 +170,7 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
         let isExpanded = false;
         button.addEventListener('click', () => {
             isExpanded = !isExpanded;
-            // Toggle display untuk item mulai dari index 3
+            // Toggle display untuk item mulai dari index 3 (MAX_LINKS_VISIBLE)
             for (let i = MAX_LINKS_VISIBLE; i < listItems.length; i++) {
                 listItems[i].style.display = isExpanded ? 'list-item' : 'none';
             }
@@ -179,6 +189,10 @@ function renderErrorState(flag, message) {
 
     loadingDiv.style.display = 'none';
     outputDiv.style.display = 'block';
+
+    // MORTA FIX: Sembunyikan Navigation Hub
+    document.getElementById('navigationHub').style.display = 'none';
+    document.getElementById('uploadSection').style.display = 'block'; // Pastikan upload terlihat
 
     const headerDiv = document.getElementById('resultHeader');
     // MORTA FIX: Target inner element
@@ -207,6 +221,9 @@ function renderLoadingState(resultBox, claim) {
 
     // Ensure Fact Check tab is visible during loading
     factCheckTab.style.display = 'block';
+
+    // MORTA FIX: Sembunyikan Navigation Hub
+    document.getElementById('navigationHub').style.display = 'none';
 
     outputDiv.style.display = 'none';
     loadingDiv.style.display = 'flex';
@@ -243,28 +260,33 @@ function getFactCheckResult() {
         }
 
         if (result && result.message) {
+            // Jika ada result, tampilkan result dan sembunyikan hub
+            document.getElementById('navigationHub').style.display = 'none';
             parseAndRenderResult(result, result.claim, resultOutputDiv);
             return;
         }
 
-        // Default state if no result
+        // Default state if no result (Tampilkan Navigation Hub)
         document.getElementById('loadingState').style.display = 'none';
-        resultOutputDiv.style.display = 'block';
+        resultOutputDiv.style.display = 'none';
+        
+        // MORTA FIX: Tampilkan Navigation Hub dan sembunyikan form upload
+        document.getElementById('navigationHub').style.display = 'block';
+        document.getElementById('uploadSection').style.display = 'none';
 
+        // Set Default header (opsional, karena hub sudah ada)
         const headerDiv = document.getElementById('resultHeader');
-        // MORTA FIX: Target inner element
         const headerTextContent = document.getElementById('headerTextContent'); 
-        
         headerDiv.className = 'Default';
-        // MORTA FIX: Hanya memasukkan teks murni
         const defaultText = HOVER_TEXT_MAP['Default'].default;
-        headerTextContent.textContent = defaultText; // CHANGED: Set text ke inner element
+        headerTextContent.textContent = defaultText; 
         
-        document.getElementById('claimDisplay').textContent = 'Ready for a New Fact Check.';
-        document.getElementById('reasoningBox').innerHTML = `<p>Instructions:</p><ul><li>Highlight text & right-click (Fact Check Text/Image).</li><li>Or, use the upload feature below.</li></ul>`;
+        // Bersihkan konten lama (penting jika navigasi dari result ke hub)
+        document.getElementById('claimDisplay').textContent = '';
+        document.getElementById('reasoningBox').innerHTML = '';
         document.getElementById('linkBox').innerHTML = '';
         
-        // == MORTA FIX: Tambahkan logic hover untuk Flag DEFAULT ==
+        // Set up hover for default header (tetap dipertahankan untuk tampilan di hub)
         const hoverText = HOVER_TEXT_MAP['Default'].hover;
         const fadeDuration = 200;
 
@@ -283,7 +305,6 @@ function getFactCheckResult() {
                 headerTextContent.style.opacity = 1;
             }, fadeDuration);
         };
-        // ========================================================
 
     });
 }
@@ -309,6 +330,10 @@ function switchTab(tabName) {
     } else { // 'factCheck'
         factCheckTab.style.display = 'block';
         historyTab.style.display = 'none';
+        
+        // MORTA FIX: Saat kembali ke FactCheck tab, panggil getFactCheckResult
+        // Ini akan menentukan apakah harus menampilkan Hub atau Result/Upload terakhir.
+        getFactCheckResult(); 
 
         if (tabHButton) tabHButton.classList.remove('active');
         if (tabFCButton) tabFCButton.classList.add('active');
@@ -319,6 +344,7 @@ async function renderHistory() {
     const historyList = document.getElementById('historyList');
     const status = document.getElementById('historyStatus');
 
+    // ... (rest of renderHistory remains the same) ...
     historyList.innerHTML = '';
     status.textContent = 'Loading history...';
     status.style.display = 'block';
@@ -449,7 +475,6 @@ function initializePopup() {
     document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 
 }
-
 
 // --- UPLOAD HANDLER (No Significant Change) ---
 
