@@ -192,7 +192,7 @@
             padding: 15px 20px;
             border-radius: var(--radius);
             font-weight: 800;
-            font-size: 25px;
+            font-size: 20px;
             /* Default size (akan di-override per kelas) */
             font-family: 'ParaRegular';
             display: flex;
@@ -200,12 +200,10 @@
             justify-content: center;
             margin-bottom: 15px;
             letter-spacing: 0.2rem;
-            /* Default spacing (akan di-override per kelas) */
             text-indent: 0;
             white-space: normal;
             overflow: visible;
             transition: all 0.2s ease;
-            /* MORTA FIX: Tambahkan border tipis di sini */
             border: 1.5px solid #1800ad;
         }
 
@@ -231,13 +229,12 @@
             color: #fff;
             font-weight: 800;
             box-shadow: 0 5px 10px rgba(52, 168, 83, 0.4);
-            /* border: none; <--- Hapus atau pastikan tidak ada, agar border utama terlihat */
             background: linear-gradient(270deg, #34A853, #7ee071, #34A853);
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
-            /* MORTA FIX: HARMONISASI FONT */
-            font-size: 16px;
+            font-size: 15px;
             letter-spacing: 0.05rem;
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
         }
 
         /* 2. MERAH (Misinformation / False) */
@@ -245,26 +242,24 @@
             color: #fff;
             background-color: var(--danger);
             box-shadow: 0 5px 10px rgba(234, 67, 53, 0.4);
-            /* border: none; <--- Hapus atau pastikan tidak ada */
             background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
-            /* MORTA FIX: HARMONISASI FONT */
-            font-size: 16px;
+            font-size: 15px;
             letter-spacing: 0.05rem;
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
         }
 
         /* 3. KUNING (Warning / Caution) */
         #resultHeader.Kuning {
             color: var(--text);
             box-shadow: 0 5px 10px rgba(251, 188, 5, 0.3);
-            /* border: none; <--- Hapus atau pastikan tidak ada */
             background: linear-gradient(270deg, #ffb300, #ff8c00, #ffd54f, #ffb300);
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
-            /* MORTA FIX: HARMONISASI FONT */
-            font-size: 16px;
+            font-size: 15px;
             letter-spacing: 0.05rem;
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
         }
 
         /* 4. ERROR (No Output / AI Failure) */
@@ -272,23 +267,23 @@
             color: #fff;
             background-color: var(--danger);
             box-shadow: 0 5px 10px rgba(234, 67, 53, 0.4);
-            /* border: none; <--- Hapus atau pastikan tidak ada */
             background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
-            font-size: 16px;
+            font-size: 15px;
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
             letter-spacing: 0.05rem;
         }
 
         /* 5. DEFAULT (Ready State) */
         #resultHeader.Default {
             color: var(--neutral);
-            font-size: 16px;
+            font-size: 15px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             background: linear-gradient(270deg, #1800ad, #7b68ee, var(--primary));
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
-            /* border: none; <--- Hapus atau pastikan tidak ada */
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
             letter-spacing: 0.05rem;
         }
 
@@ -320,6 +315,7 @@
             color: #1800ad;
             letter-spacing: 0.5px;
             background-color: #ffffff;
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
             border-radius: var(--radius);
             text-align: justify;
             font-size: 15px;
@@ -329,7 +325,7 @@
             padding: 12px;
             background: #ffffff;
             border-radius: var(--radius);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
             margin-bottom: 15px;
             text-align: justify;
             font-size: 15px;
@@ -577,7 +573,7 @@
 
         .history-claim {
             font-weight: bold;
-            font-size: 14px;
+            font-size: 15px;
             margin-bottom: 5px;
         }
 
@@ -633,18 +629,13 @@
             padding: 0;
             background: none;
             cursor: pointer;
-
             width: 48%;
             height: 50px;
             min-width: 120px;
-
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             transition: background-image 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
-
-            font-size: 0;
-            line-height: 0;
             display: inline-block !important;
             visibility: visible !important;
             opacity: 1 !important;
@@ -689,13 +680,66 @@
         #tabHistory:not(.active):hover {
             background-image: url('icons/hhover.png');
         }
+
+        /* =================================================== */
+        /* NAVIGATION HUB STYLES */
+        /* =================================================== */
+        .nav-button {
+            /* MORTA FIX: 100% width untuk layout vertikal */
+            width: 100%;
+            height: 120px;
+            margin: 0;
+            margin-bottom: 20px;
+            background-color: transparent;
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: transparent;
+            font-size: 0;
+            transition: background-image 0.2s ease, transform 0.15s ease;
+        }
+
+        /* Hover State - Gambar akan diganti oleh JS */
+        .nav-button:hover {
+            transform: scale(1.02); 
+            box-shadow: 0 4px 8px rgba(24, 0, 173, 0.2);
+        }
+
+        /* Menetapkan default icons awal (CSS fallback) */
+        #btnText {
+            background-image: url('icons/txtIcon.png');
+        }
+
+        #btnImage {
+            background-image: url('icons/imgIcon.png');
+        }
+
+        #btnURL {
+            background-image: url('icons/urlIcon.png');
+        }
+
+        /*Welcome Text here */
+        .welcomeText {
+            width: 14.3rem;
+            align-items: center;
+            height: 10rem;
+            padding: 15px 20px;
+            border-radius: var(--radius);
+            background-color: #ffffff;
+            font-family: 'ParaRegular';
+            letter-spacing: 0.5px;
+            overflow: visible;
+            transition: all 0.2s ease;
+            border: none;
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
+        }
     </style>
 </head>
 
 <body>
     <div id="appContainer">
         <div id="splashScreen">
-            <video id="splashVideo" autoplay muted playsinline>
+            <video id="splashVideo" autoplay muted playsplaysinline>
                 <source src="icons/Veritas.mp4" type="video/mp4">
                 Your browser does not support HTML5 video.
             </video>
@@ -715,13 +759,34 @@
                 <button id="tabHistory"></button>
             </div>
 
+            <div id="resultHeader"><span id="headerTextContent"></span></div>
+
             <div id="tabContent">
                 <div id="factCheckTab">
-                    <div id="navigationHub" style="display:none; padding-top: 50px; text-align: center; height: 350px;">
-                        <h4 style="font-size: 20px; color: var(--primary);">Welcome to Veritas AI
-                            
-                        </h4>
-                        <p style="color: #444; font-size: 14px;">Select an option above to begin checking your claims.</p>
+                    <div id="navigationHub" style="display:none; padding-top: 2.5px; height: 350px;">
+                        <div class="welcomeText">
+                            <button id="closeWelcome"
+                                style="float: right; cursor: pointer; border: none; background: none; font-size: 15px; color: #807f92;">&times;</button>
+                            <h4 style="font-size: 20px; color: var(--primary); letter-spacing: 1px; padding-top: 10px;">
+                                Welcome to Veritas AI</h4>
+                            <p style="color: #807f92; font-size: 15px;">We're here to help verifying information in
+                                order to make your browsing experience safe and secure!</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 25px;">
+                            <h4 style="font-size: 15px; color: var(--primary); letter-spacing: 1px;">To get started, select the option down below:</h4>
+                            <div id="navButtonsContainer" style=" flex-direction: column; gap: 10px; margin-top: 20px;">
+                                <button id="btnText" class="nav-button" data-icon="txtIcon.png" data-hover-icon="txtHover.png" data-target-view="textCheck">
+                                    Text
+                                </button>
+                                <button id="btnImage" class="nav-button" data-icon="imgIcon.png" data-hover-icon="imgHover.png" data-target-view="imageCheck">
+                                    Image
+                                </button>
+                                <button id="btnURL" class="nav-button" data-icon="urlIcon.png" data-hover-icon="urlHover.png" data-target-view="urlCheck">
+                                    URL
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="loadingState" style="display:none; margin-top: 20px;">
@@ -743,6 +808,11 @@
                         <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
                         <button id="submitUploadButton">Analyze Image</button>
                         <div id="uploadStatus"></div>
+                    </div>
+
+                    <div id="urlCheckSection" style="display:none; padding: 12px; margin-top: 18px; background: rgba(240, 240, 255, 0.9); border-radius: var(--radius); text-align: center;">
+                        <h4 style="color: var(--primary); font-size: 20px; margin-bottom: 5px;">URL Fact Check</h4>
+                        <p style="font-size: 15px; color: #666;">**Feature Coming Soon!** Currently not available in the MVP.</p>
                     </div>
                 </div>
 

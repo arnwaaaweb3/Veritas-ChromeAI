@@ -1,3 +1,5 @@
+// [File popup.js tetap sama dengan versi clean sebelumnya, namun sekarang setupNavigationHub() akan bekerja dengan tombol vertikal baru.]
+
 document.addEventListener('DOMContentLoaded', initializePopup);
 
 const HISTORY_KEY = 'veritasHistory'; // Declaration of HISTORY_KEY
@@ -28,6 +30,73 @@ const HOVER_TEXT_MAP = {
     'Error': { default: 'ERROR', hover: 'SOMETHING WENT WRONG' },
     'Default': { default: 'READY TO VERIFY', hover: 'CHECK YOUR CLAIMS NOW!' }
 };
+
+// ==============================================================================
+// MORTA FIX: NAVIGATION HUB LOGIC (showView and setupNavigationHub)
+// ==============================================================================
+
+// Function to show the selected view and hide others
+function showView(viewName) {
+    // 1. Sembunyikan semua kontainer fungsionalitas
+    document.getElementById('resultOutput').style.display = 'none';
+    document.getElementById('uploadSection').style.display = 'none';
+    const urlCheckDiv = document.getElementById('urlCheckSection');
+    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
+    
+    // Pastikan Navigation Hub disembunyikan saat beralih ke fitur
+    document.getElementById('navigationHub').style.display = 'none'; 
+
+    // 2. Tentukan view mana yang akan ditampilkan
+    if (viewName === 'textCheck') {
+        // Text/Claim: Menampilkan result output (Default State) + Upload Form (Text area dapat digunakan)
+        document.getElementById('resultOutput').style.display = 'block';
+        document.getElementById('uploadSection').style.display = 'block';
+        // Memaksa header ke default state (READY) karena user mulai dari hub
+        getFactCheckResult(true); 
+    } else if (viewName === 'imageCheck') {
+        // Image Check: Menampilkan form upload (uploadSection)
+        document.getElementById('resultOutput').style.display = 'none'; // Sembunyikan hasil sebelumnya
+        document.getElementById('uploadSection').style.display = 'block'; 
+    } else if (viewName === 'urlCheck') {
+        // URL Check: Menampilkan container placeholder baru
+        if (urlCheckDiv) urlCheckDiv.style.display = 'block';
+        document.getElementById('uploadSection').style.display = 'none'; // Sembunyikan form upload
+        document.getElementById('resultOutput').style.display = 'none'; 
+    } else {
+        // Default (kembali ke hub)
+        document.getElementById('navigationHub').style.display = 'block';
+        getFactCheckResult(true); // Re-render default header/clean state
+    }
+}
+
+// Function untuk memasang listener ke 3 tombol baru
+function setupNavigationHub() {
+    const navButtonsContainer = document.getElementById('navButtonsContainer');
+    if (!navButtonsContainer) return;
+
+    navButtonsContainer.querySelectorAll('.nav-button').forEach(button => {
+        const defaultIcon = button.getAttribute('data-icon');
+        const hoverIcon = button.getAttribute('data-hover-icon');
+        const targetView = button.getAttribute('data-target-view');
+        
+        // Atur icon default (penting karena CSS hanya fallback)
+        button.style.backgroundImage = `url('icons/${defaultIcon}')`;
+
+        // Logic Hover (ganti gambar)
+        button.onmouseover = () => {
+            button.style.backgroundImage = `url('icons/${hoverIcon}')`;
+        };
+        button.onmouseout = () => {
+            button.style.backgroundImage = `url('icons/${defaultIcon}')`;
+        };
+
+        // Logic Click (ganti view)
+        button.onclick = () => {
+            showView(targetView);
+        };
+    });
+}
+// ==============================================================================
 
 // Utility to parse Markdown results (according to the new format in background.js)
 function parseAndRenderResult(result, claimText, resultOutputDiv) {
@@ -211,7 +280,6 @@ function renderErrorState(flag, message) {
     linkDiv.innerHTML = '';
 }
 
-
 // 🔁 Utility to render spinner loading state
 function renderLoadingState(resultBox, claim) {
     const loadingDiv = document.getElementById('loadingState');
@@ -222,14 +290,17 @@ function renderLoadingState(resultBox, claim) {
     // Ensure Fact Check tab is visible during loading
     factCheckTab.style.display = 'block';
 
-    // MORTA FIX: Sembunyikan Navigation Hub
+    // MORTA FIX: Sembunyikan Navigation Hub dan Upload/URL Section
     document.getElementById('navigationHub').style.display = 'none';
+    document.getElementById('uploadSection').style.display = 'block'; 
+    const urlCheckDiv = document.getElementById('urlCheckSection');
+    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
+
 
     outputDiv.style.display = 'none';
     loadingDiv.style.display = 'flex';
     claimText.textContent = `"${claim || 'Verifying claim data...'}"`;
 }
-
 
 // ✅ Main listener for result updates from background (used for live updates while loading)
 function handleLiveResultUpdate(request, sender, sendResponse) {
@@ -250,6 +321,12 @@ function handleLiveResultUpdate(request, sender, sendResponse) {
 // ✅ Get result from storage (e.g., when popup is newly opened)
 function getFactCheckResult() {
     const resultOutputDiv = document.getElementById('resultOutput');
+    
+    // Sembunyikan semua kontainer fungsionalitas
+    document.getElementById('resultOutput').style.display = 'none';
+    document.getElementById('uploadSection').style.display = 'none';
+    const urlCheckDiv = document.getElementById('urlCheckSection');
+    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
 
     chrome.storage.local.get(['lastFactCheckResult'], (storage) => {
         const result = storage.lastFactCheckResult;
@@ -260,19 +337,18 @@ function getFactCheckResult() {
         }
 
         if (result && result.message) {
-            // Jika ada result, tampilkan result dan sembunyikan hub
+            // Jika ada result, tampilkan result dan upload section
             document.getElementById('navigationHub').style.display = 'none';
+            document.getElementById('uploadSection').style.display = 'block';
             parseAndRenderResult(result, result.claim, resultOutputDiv);
             return;
         }
 
         // Default state if no result (Tampilkan Navigation Hub)
         document.getElementById('loadingState').style.display = 'none';
-        resultOutputDiv.style.display = 'none';
         
-        // MORTA FIX: Tampilkan Navigation Hub dan sembunyikan form upload
+        // MORTA FIX: Tampilkan Navigation Hub
         document.getElementById('navigationHub').style.display = 'block';
-        document.getElementById('uploadSection').style.display = 'none';
 
         // Set Default header (opsional, karena hub sudah ada)
         const headerDiv = document.getElementById('resultHeader');
@@ -310,8 +386,6 @@ function getFactCheckResult() {
 }
 
 // --- HISTORY LOGIC (START) ---
-// ... (Logic tetap sama) ...
-
 function switchTab(tabName) {
     const factCheckTab = document.getElementById('factCheckTab');
     const historyTab = document.getElementById('historyTab');
@@ -386,7 +460,6 @@ async function renderHistory() {
 
         historyList.appendChild(itemDiv);
     });
-
 }
 
 // SNIPPET 4C: clearHistory function in popup.js
@@ -407,77 +480,7 @@ async function clearHistory() {
 }
 // --- HISTORY LOGIC (END) ---
 
-
-// --- INITIALIZATION (UPDATED LISTENER) ---
-
-function initializePopup() {
-    const splash = document.getElementById('splashScreen');
-    const main = document.getElementById('mainContent');
-    const video = document.getElementById('splashVideo');
-
-    const splashDuration = 5000;
-    const fadeOutTime = 500;
-
-    chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
-
-    chrome.storage.local.get(['isContextualCheck', 'hasSeenSplash'], (storage) => {
-        const isContextualCheck = storage.isContextualCheck;
-        const hasSeenSplash = storage.hasSeenSplash;
-
-        if (isContextualCheck) {
-            chrome.storage.local.remove('isContextualCheck');
-        }
-
-        const shouldBypassSplash = isContextualCheck || hasSeenSplash;
-
-
-        if (shouldBypassSplash) {
-            if (video) video.pause();
-            if (splash) splash.style.display = 'none';
-            if (main) main.classList.add('visible');
-
-            getFactCheckResult();
-            setupUploadListener();
-        } else {
-            chrome.storage.local.set({ 'hasSeenSplash': true });
-
-            if (video) video.pause();
-            if (video) video.currentTime = 0;
-            if (video) video.play();
-
-            const endSplashAndInit = () => {
-                if (splash) splash.classList.add('fade-out');
-                setTimeout(() => {
-                    if (splash) splash.style.display = 'none';
-                    if (main) main.classList.add('visible');
-                    getFactCheckResult();
-                    setupUploadListener();
-                }, fadeOutTime);
-            };
-
-            setTimeout(() => {
-                if (splash && splash.style.display !== 'none' && !splash.classList.contains('fade-out')) {
-                    endSplashAndInit();
-                }
-            }, splashDuration);
-
-            if (video) {
-                video.addEventListener('ended', endSplashAndInit);
-            }
-        }
-
-        document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
-        document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
-        switchTab('factCheck');
-
-    });
-
-    document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
-
-}
-
 // --- UPLOAD HANDLER (No Significant Change) ---
-
 function setupUploadListener() {
     const fileInput = document.getElementById('imageFileInput');
     const textInput = document.getElementById('textClaimInput');
@@ -564,4 +567,100 @@ function readFileAsBase64(file) {
         reader.onerror = (error) => reject(error);
         reader.readAsDataURL(file);
     });
+}
+
+function setupWelcomeMessage() {
+    const welcomeTextContainer = document.querySelector('.welcomeText');
+    const closeButton = document.getElementById('closeWelcome');
+    
+    // Check local storage. Jika user sudah pernah menutup (seenWelcome=true), sembunyikan.
+    chrome.storage.local.get(['seenWelcome'], (result) => {
+        if (result.seenWelcome && welcomeTextContainer) {
+            welcomeTextContainer.style.display = 'none';
+        }
+    });
+
+    if (closeButton && welcomeTextContainer) {
+        closeButton.addEventListener('click', () => {
+            // 1. Sembunyikan container welcome
+            welcomeTextContainer.style.opacity = 0;
+            setTimeout(() => {
+                welcomeTextContainer.style.display = 'none';
+                welcomeTextContainer.style.opacity = 1; // Reset opacity
+            }, 200); 
+
+            // 2. Simpan flag ke local storage agar tidak muncul lagi
+            chrome.storage.local.set({ 'seenWelcome': true });
+        });
+    }
+}
+
+// --- INITIALIZATION (UPDATED LISTENER) ---
+function initializePopup() {
+    const splash = document.getElementById('splashScreen');
+    const main = document.getElementById('mainContent');
+    const video = document.getElementById('splashVideo');
+
+    const splashDuration = 5000;
+    const fadeOutTime = 500;
+
+    chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
+
+    chrome.storage.local.get(['isContextualCheck', 'hasSeenSplash'], (storage) => {
+        const isContextualCheck = storage.isContextualCheck;
+        const hasSeenSplash = storage.hasSeenSplash;
+
+        if (isContextualCheck) {
+            chrome.storage.local.remove('isContextualCheck');
+        }
+
+        const shouldBypassSplash = isContextualCheck || hasSeenSplash;
+
+
+        if (shouldBypassSplash) {
+            if (video) video.pause();
+            if (splash) splash.style.display = 'none';
+            if (main) main.classList.add('visible');
+
+            getFactCheckResult();
+            setupUploadListener();
+        } else {
+            chrome.storage.local.set({ 'hasSeenSplash': true });
+
+            if (video) video.pause();
+            if (video) video.currentTime = 0;
+            if (video) video.play();
+
+            const endSplashAndInit = () => {
+                if (splash) splash.classList.add('fade-out');
+                setTimeout(() => {
+                    if (splash) splash.style.display = 'none';
+                    if (main) main.classList.add('visible');
+                    getFactCheckResult();
+                    setupUploadListener();
+                }, fadeOutTime);
+            };
+
+            setTimeout(() => {
+                if (splash && splash.style.display !== 'none' && !splash.classList.contains('fade-out')) {
+                    endSplashAndInit();
+                }
+            }, splashDuration);
+
+            if (video) {
+                video.addEventListener('ended', endSplashAndInit);
+            }
+        }
+
+        document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
+        document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
+        switchTab('factCheck');
+
+    });
+
+    setupNavigationHub(); 
+    setupWelcomeMessage();
+
+    document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
+
 }
