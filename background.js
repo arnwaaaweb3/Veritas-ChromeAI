@@ -303,6 +303,44 @@ chrome.runtime.onMessage.addListener(
             });
             return true; // Indicates an asynchronous response
         }
+        if (request.action === 'textOnlyFactCheck') {
+            const claim = request.claim;
+
+            console.log(
+                "[Veritas Popup] Received Text-Only claim for processing."
+            );
+
+            // 1. Set Loading state in storage (for popup display)
+            const loadingResult = {
+                flag: 'loading',
+                claim: claim,
+                message: "Veritas is verifying this claim..."
+            };
+            chrome.storage.local.set({ 'lastFactCheckResult': loadingResult });
+
+            // 2. Run the existing Hybrid Fact Check Logic (Function 5)
+            runFactCheckHybrid(claim).then(result => {
+                // 3. Update result and notify popup
+                sendFactCheckNotification(claim, result.flag !== 'Error');
+                chrome.storage.local.set({ 'lastFactCheckResult': result });
+
+                chrome.runtime.sendMessage({
+                    action: 'updateFinalResult',
+                    resultData: result
+                });
+                sendResponse({ success: true, result: result });
+
+            }).catch(error => {
+                const errorResult = { flag: "Error", message: `Text Fact Check Failed: ${error.message}`, claim: claim };
+                sendFactCheckNotification(claim, false);
+                chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
+
+                chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
+                sendResponse({ success: false, error: errorResult });
+            });
+
+            return true; // Indicates an asynchronous response
+        }
     }
 );
 
