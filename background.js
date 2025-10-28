@@ -6,7 +6,8 @@ import {
     LOCAL_PROMPT_PRE_PROCESS,
     LOCAL_PROMPT_TEXT_FALLBACK,
     LOCAL_PROMPT_MULTIMODAL_FALLBACK,
-    CLOUD_PROMPT_TEST_KEY
+    CLOUD_PROMPT_TEST_KEY,
+    CLOUD_PROMPT_URL_CONTEXT 
 } from './prompt.js';
 
 // --- LOCAL AI HELPER FUNCTIONS (START) ---
@@ -299,7 +300,7 @@ chrome.runtime.onMessage.addListener(
 
             return true; // Indicates an asynchronous response
         }
-
+        
         // --- 2. POPUP: MULTIMODAL UPLOAD (Existing) ---
         if (request.action === 'multimodalUpload') {
             const { base64, mimeType, claim } = request;
@@ -329,8 +330,43 @@ chrome.runtime.onMessage.addListener(
 
             return true; // Indicates an asynchronous response
         }
+
+        // --- 3. URL: RECEIVE SCRAPED CONTENT (NEW LISTENER) ---
+        if (request.action === 'urlContentScraped') {
+            const { data } = request;
+            const storage = sender.tab ? sender.tab.id : null;
+            
+            console.log("[Veritas URL] Received scraped content from active tab.");
+
+            // Dapatkan claim yang disimpan saat tombol URL diklik (claim disimpan di popup.js)
+            chrome.storage.local.get(['lastFactCheckResult'], async (result) => {
+                const claim = result.lastFactCheckResult ? result.lastFactCheckResult.claim : 'Claim not found';
+
+                if (data.error) {
+                    const errorResult = { flag: "Error", message: `URL Fact Check Failed: Scraper Error: ${data.error}`, claim: claim };
+                    chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
+                    chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
+                    sendResponse({ success: false });
+                    return;
+                }
+
+                // Jalankan Core Logic untuk URL Context
+                const finalResult = await runFactCheckUrlContext(claim, data.textContent, data.pageUrl);
+
+                sendFactCheckNotification(claim, finalResult.flag !== 'Error');
+                chrome.storage.local.set({ 'lastFactCheckResult': finalResult });
+
+                chrome.runtime.sendMessage({
+                    action: 'updateFinalResult',
+                    resultData: finalResult
+                });
+                sendResponse({ success: true, result: finalResult });
+            });
+            
+            return true; // Asynchronous response
+        }
         
-        // --- 3. SETTINGS: TEST API KEY (Existing) ---
+        // --- 4. SETTINGS: TEST API KEY (Existing) ---
         if (request.action === 'testGeminiKey') {
             const apiKeyToTest = request.apiKey;
 
@@ -774,4 +810,38 @@ async function testGeminiKeyLogic(apiKey) {
     } catch (error) {
         return { success: false, message: `Network/Fetch Error: ${error.message}` };
     }
+}
+
+// ====================================================================
+// FUNCTION X: RUN URL FACT CHECK CONTEXT (NEW CORE LOGIC)
+// Core logic for processing URL content and sending it to Gemini.
+// ====================================================================
+async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
+    // Note: Caching is often skipped for URL Context checks due to dynamic content, 
+    // but we can check based on the URL and Claim hash if needed. For now, skip cache.
+    
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    const geminiApiKey = resultStorage.geminiApiKey;
+    
+    if (!geminiApiKey) {
+        return {
+            flag: "Error",
+            message: "Gemini API Key is not set. Contextual URL Fact Check requires Cloud access.",
+            claim: claim
+        };
+    }
+
+    // Use imported prompt for URL Context
+    const prompt = CLOUD_PROMPT_URL_CONTEXT(claim, pageContent, pageUrl);
+
+    console.log(
+        "[Veritas URL Context] Sending URL page content and claim to Gemini Cloud (with Google Search)..."
+    );
+
+    const contents = [{ role: "user", parts: [{ text: prompt }] }];
+
+    // Gunakan executeGeminiCall yang sudah ada, tapi kita buat versi khusus untuk URL
+    const result = await executeGeminiCall(claim, contents);
+    
+    return result;
 }
