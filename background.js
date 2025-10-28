@@ -1,4 +1,4 @@
-// background.js (CLEAN V11: Consolidated Listeners & Text-Only Activation)
+// background.js (CLEAN V12: URL Context Activation)
 
 import {
     CLOUD_PROMPT_TEXT_ONLY,
@@ -7,6 +7,7 @@ import {
     LOCAL_PROMPT_TEXT_FALLBACK,
     LOCAL_PROMPT_MULTIMODAL_FALLBACK,
     CLOUD_PROMPT_TEST_KEY,
+    // MORTA FIX: ADD NEW PROMPT IMPORT
     CLOUD_PROMPT_URL_CONTEXT 
 } from './prompt.js';
 
@@ -300,7 +301,7 @@ chrome.runtime.onMessage.addListener(
 
             return true; // Indicates an asynchronous response
         }
-        
+
         // --- 2. POPUP: MULTIMODAL UPLOAD (Existing) ---
         if (request.action === 'multimodalUpload') {
             const { base64, mimeType, claim } = request;
@@ -330,18 +331,18 @@ chrome.runtime.onMessage.addListener(
 
             return true; // Indicates an asynchronous response
         }
-
+        
         // --- 3. URL: RECEIVE SCRAPED CONTENT (NEW LISTENER) ---
         if (request.action === 'urlContentScraped') {
             const { data } = request;
-            const storage = sender.tab ? sender.tab.id : null;
             
             console.log("[Veritas URL] Received scraped content from active tab.");
 
             // Dapatkan claim yang disimpan saat tombol URL diklik (claim disimpan di popup.js)
             chrome.storage.local.get(['lastFactCheckResult'], async (result) => {
-                const claim = result.lastFactCheckResult ? result.lastFactCheckResult.claim : 'Claim not found';
-
+                const claim = result.lastFactCheckResult ? result.lastFactCheckResult.claim : 'Claim not found (Contextual URL check)';
+                
+                // --- MORTA FIX: HANDLE SCRAPING ERROR ---
                 if (data.error) {
                     const errorResult = { flag: "Error", message: `URL Fact Check Failed: Scraper Error: ${data.error}`, claim: claim };
                     chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
@@ -365,7 +366,7 @@ chrome.runtime.onMessage.addListener(
             
             return true; // Asynchronous response
         }
-        
+
         // --- 4. SETTINGS: TEST API KEY (Existing) ---
         if (request.action === 'testGeminiKey') {
             const apiKeyToTest = request.apiKey;
@@ -813,7 +814,7 @@ async function testGeminiKeyLogic(apiKey) {
 }
 
 // ====================================================================
-// FUNCTION X: RUN URL FACT CHECK CONTEXT (NEW CORE LOGIC)
+// MORTA FIX: NEW FUNCTION X: RUN URL FACT CHECK CONTEXT (NEW CORE LOGIC)
 // Core logic for processing URL content and sending it to Gemini.
 // ====================================================================
 async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
@@ -831,17 +832,90 @@ async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
         };
     }
 
-    // Use imported prompt for URL Context
+    // Use imported prompt for URL Context (Requires CLOUD_PROMPT_URL_CONTEXT to be imported in prompt.js)
     const prompt = CLOUD_PROMPT_URL_CONTEXT(claim, pageContent, pageUrl);
 
     console.log(
-        "[Veritas URL Context] Sending URL page content and claim to Gemini Cloud (with Google Search)..."
+        "[Veritas URL Context] Sending URL page content and claim to Gemini Cloud (WITHOUT Google Search to ensure contextual accuracy)..."
     );
-
-    const contents = [{ role: "user", parts: [{ text: prompt }] }];
-
-    // Gunakan executeGeminiCall yang sudah ada, tapi kita buat versi khusus untuk URL
-    const result = await executeGeminiCall(claim, contents);
     
-    return result;
+    // We modify the core Gemini call to explicitly NOT use Google Search here, 
+    // to force it to use the provided page context only.
+    
+    const contents = [{ role: "user", parts: [{ text: prompt }] }];
+    
+    // This is a custom call that doesn't use executeGeminiCall to disable the Google Search tool.
+    
+    const payload = {
+        contents: contents,
+        // tools: [{ googleSearch: {} }] // COMMENTED OUT: We explicitly DON'T want grounding here.
+    };
+
+    try {
+        const response = await fetch(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": geminiApiKey
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        // This simplified result parsing reuses logic from executeGeminiCall for consistency.
+        const data = await response.json();
+
+        if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
+            
+            const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim();
+            const firstLine = aiResponse.split('\n')[0].trim().toUpperCase();
+
+            let flag = "Kuning"; 
+            const flagMatch = firstLine.match(/^(FACT|MISINFORMATION|CAUTION)/);
+
+            if (flagMatch) {
+                const keyword = flagMatch[0];
+                if (keyword === "FACT") { flag = "Hijau"; } 
+                else if (keyword === "MISINFORMATION") { flag = "Merah"; }
+                else if (keyword === "CAUTION") { flag = "Kuning"; }
+            }
+            
+            const reasonStart = aiResponse.replace(/^(FACT|MISINFORMATION|CAUTION)\s*(=)?\s*/i, '').trim();
+            const parts = reasonStart.split('Reason:');
+            const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : reasonStart;
+            
+            const formattedMessage = `
+**"${claim}"**
+Reason:
+${rawReasoning}
+Link:
+- [Context based on URL: ${pageUrl}]
+            `.trim();
+
+            const finalResult = {
+                flag: flag,
+                message: `${flag.toUpperCase()}=${formattedMessage}`,
+                claim: claim
+            };
+
+            saveFactCheckToHistory(finalResult);
+            return finalResult;
+        } else if (data.error) {
+            return { flag: "Error", message: `API Error: ${data.error.message}`, debug: JSON.stringify(data.error) };
+        } else {
+            let detailedError = "Failed to process AI. Unexpected response (possibly due to prompt/content length).";
+            if (data.promptFeedback && data.promptFeedback.blockReason) {
+                detailedError = `Claim blocked by Safety Filter: ${data.promptFeedback.blockReason}`;
+            }
+            return { flag: "Error", message: detailedError, debug: JSON.stringify(data) };
+        }
+
+    } catch (error) {
+        console.error("[Veritas URL Context Call] Fatal Fetch Error:", error);
+        return {
+            flag: "Error",
+            message: `Network/Fatal Error during URL Context Check: ${error.message}`,
+            debug: error.message
+        };
+    }
 }
