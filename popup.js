@@ -30,43 +30,68 @@ const HOVER_TEXT_MAP = {
 };
 
 // ==============================================================================
-// MORTA FIX: NAVIGATION HUB LOGIC (showView and setupNavigationHub)
+// NAVIGATION HUB LOGIC 
 // ==============================================================================
 
 // Function to show the selected view and hide others
 function showView(viewName) {
     // 1. Sembunyikan semua kontainer fungsionalitas (Bersih-bersih)
     document.getElementById('resultOutput').style.display = 'none';
-    document.getElementById('uploadSection').style.display = 'none';
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('navigationHub').style.display = 'none'; 
     
-    const urlCheckDiv = document.getElementById('urlCheckSection');
-    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
-    
-    const textCheckDiv = document.getElementById('textCheckSection'); // NEW Text-Only Div
-    if (textCheckDiv) textCheckDiv.style.display = 'none'; 
+    // Container dinamis untuk input
+    const dynamicContent = document.getElementById('dynamicContent');
+    dynamicContent.style.display = 'none';
+    dynamicContent.innerHTML = ''; // Hapus konten lama (bersih-bersih)
 
     // 2. Tentukan view mana yang akan ditampilkan
     if (viewName === 'textCheck') {
-        // Text-Only Check: Menampilkan result output (Default State) + Text Input BARU
         document.getElementById('resultOutput').style.display = 'block';
-        if (textCheckDiv) textCheckDiv.style.display = 'block'; 
-        getFactCheckResult(true); 
+        loadAndSetupView('text_check', setupTextCheckListener);
     } else if (viewName === 'imageCheck') {
-        // Image Check: Menampilkan result output (Default State) + Multimodal Input LAMA
         document.getElementById('resultOutput').style.display = 'block'; 
-        document.getElementById('uploadSection').style.display = 'block'; // Show EXISTING multimodal section
-        getFactCheckResult(true);
+        loadAndSetupView('image_check', setupUploadListener);
     } else if (viewName === 'urlCheck') {
-        // URL Check: Menampilkan result output (Default State) + container placeholder baru
         document.getElementById('resultOutput').style.display = 'block'; 
-        if (urlCheckDiv) urlCheckDiv.style.display = 'block';
-        getFactCheckResult(true);
+        loadAndSetupView('url_check'); // URL check has no unique listener (yet)
     } else {
         // Default (kembali ke hub)
         document.getElementById('navigationHub').style.display = 'block';
         getFactCheckResult(true); // Re-render default header/clean state
+    }
+}
+
+// Function baru untuk memuat HTML secara dinamis dan memasang listener
+async function loadAndSetupView(viewFileName, setupFunction = null) {
+    const dynamicContent = document.getElementById('dynamicContent');
+    try {
+        // MORTA: Pastikan file diakses sebagai resource ekstensi
+        const response = await fetch(chrome.runtime.getURL(viewFileName + '.html'));
+        if (!response.ok) {
+            throw new Error(`File ${viewFileName}.html not found or access denied.`);
+        }
+        const html = await response.text();
+        
+        dynamicContent.innerHTML = html;
+        dynamicContent.style.display = 'block';
+
+        // Panggil setup listener spesifik (e.g., submit button)
+        if (setupFunction) {
+            setupFunction();
+        }
+        
+        // MORTA FIX: PASANG LISTENER TOMBOL BACK SETELAH KONTEN DIMUAT
+        setupBackButtonListener();
+        
+        // Kita panggil getFactCheckResult(true) hanya untuk reset header, 
+        // BUKAN untuk menampilkan Hub lagi.
+        getFactCheckResult(true); 
+
+    } catch (error) {
+        console.error("Morta Error: Gagal memuat view", viewFileName, error);
+        dynamicContent.innerHTML = `<div class="dynamic-input-form" style="padding: 12px; margin-top: 18px; background: rgba(255, 230, 230, 0.9); border-radius: var(--radius); text-align: center;"><p style="color:red; font-weight:bold;">Morta Error: Failed to load input form. Make sure you created the file: ${viewFileName}.html</p></div>`;
+        dynamicContent.style.display = 'block';
     }
 }
 
@@ -112,15 +137,17 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     // Display resultOutput and hide loadingState
     document.getElementById('loadingState').style.display = 'none';
     resultOutputDiv.style.display = 'block';
+    
+    // MORTA FIX: Tampilkan New Check Button
+    const newCheckButton = document.getElementById('newCheckButton');
+    if (newCheckButton) {
+        newCheckButton.style.display = 'block';
+    }
 
-    // MORTA FIX: Sembunyikan Hub, pastikan section yang tidak terpakai disembunyikan
+    // MORTA FIX: Sembunyikan Hub dan Dynamic Content
     document.getElementById('navigationHub').style.display = 'none';
-    document.getElementById('uploadSection').style.display = 'block'; 
-    const urlCheckDiv = document.getElementById('urlCheckSection');
-    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
-    const textCheckDiv = document.getElementById('textCheckSection');
-    if (textCheckDiv) textCheckDiv.style.display = 'none';
-
+    document.getElementById('dynamicContent').style.display = 'none';
+    
     const headerDiv = document.getElementById('resultHeader');
     // MORTA FIX: Target inner element untuk manipulasi teks/fade
     const headerTextContent = document.getElementById('headerTextContent'); 
@@ -205,7 +232,7 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const MAX_LINKS_VISIBLE = 3; 
 
     if (linkLines.length > 0) {
-        linkLines.forEach((line, index) => { // <-- FIX 2: Tambah index untuk hitung dan sembunyikan
+        linkLines.forEach((line, index) => { 
             // Logika untuk menyembunyikan item > MAX_LINKS_VISIBLE
             const isHidden = index >= MAX_LINKS_VISIBLE;
             const hiddenStyle = isHidden ? ' style="display: none;"' : ''; 
@@ -263,16 +290,17 @@ function renderErrorState(flag, message) {
 
     loadingDiv.style.display = 'none';
     outputDiv.style.display = 'block';
+    
+    // MORTA FIX: Tampilkan New Check Button
+    const newCheckButton = document.getElementById('newCheckButton');
+    if (newCheckButton) {
+        newCheckButton.style.display = 'block';
+    }
 
-    // MORTA FIX: Sembunyikan semua kecuali result
+    // MORTA FIX: Sembunyikan Hub dan Dynamic Content
     document.getElementById('navigationHub').style.display = 'none';
-    document.getElementById('uploadSection').style.display = 'block'; 
-    const urlCheckDiv = document.getElementById('urlCheckSection');
-    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
-    const textCheckDiv = document.getElementById('textCheckSection');
-    if (textCheckDiv) textCheckDiv.style.display = 'none';
-
-
+    document.getElementById('dynamicContent').style.display = 'none';
+    
     const headerDiv = document.getElementById('resultHeader');
     // MORTA FIX: Target inner element
     const headerTextContent = document.getElementById('headerTextContent');
@@ -300,14 +328,15 @@ function renderLoadingState(resultBox, claim) {
     // Ensure Fact Check tab is visible during loading
     factCheckTab.style.display = 'block';
 
-    // MORTA FIX: Sembunyikan semua kecuali loading
+    // MORTA FIX: Sembunyikan semua kecuali loading, termasuk New Check Button
     document.getElementById('navigationHub').style.display = 'none';
-    document.getElementById('uploadSection').style.display = 'none'; 
-    const urlCheckDiv = document.getElementById('urlCheckSection');
-    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
+    document.getElementById('dynamicContent').style.display = 'none';
     document.getElementById('resultOutput').style.display = 'none';
-    const textCheckDiv = document.getElementById('textCheckSection');
-    if (textCheckDiv) textCheckDiv.style.display = 'none';
+    
+    const newCheckButton = document.getElementById('newCheckButton');
+    if (newCheckButton) {
+        newCheckButton.style.display = 'none';
+    }
 
 
     outputDiv.style.display = 'none';
@@ -337,11 +366,13 @@ function getFactCheckResult(forceDefault = false) {
     
     // Sembunyikan semua kontainer fungsionalitas
     document.getElementById('resultOutput').style.display = 'none';
-    document.getElementById('uploadSection').style.display = 'none';
-    const urlCheckDiv = document.getElementById('urlCheckSection');
-    if (urlCheckDiv) urlCheckDiv.style.display = 'none';
-    const textCheckDiv = document.getElementById('textCheckSection');
-    if (textCheckDiv) textCheckDiv.style.display = 'none';
+    document.getElementById('dynamicContent').style.display = 'none';
+
+    // MORTA FIX: Sembunyikan New Check Button
+    const newCheckButton = document.getElementById('newCheckButton');
+    if (newCheckButton) {
+        newCheckButton.style.display = 'none';
+    }
 
     chrome.storage.local.get(['lastFactCheckResult'], (storage) => {
         const result = storage.lastFactCheckResult;
@@ -352,32 +383,35 @@ function getFactCheckResult(forceDefault = false) {
         }
 
         if (result && result.message && !forceDefault) { 
-            // Jika ada result, tampilkan result dan upload section
+            // Jika ada result, tampilkan result.
             document.getElementById('navigationHub').style.display = 'none';
-            document.getElementById('uploadSection').style.display = 'block';
             parseAndRenderResult(result, result.claim, resultOutputDiv);
             return;
         }
 
-        // Default state if no result OR if forceDefault is true (Tampilkan Navigation Hub)
+        // Default state if no result OR if forceDefault is true
         document.getElementById('loadingState').style.display = 'none';
         
-        // MORTA FIX: Tampilkan Navigation Hub
-        document.getElementById('navigationHub').style.display = 'block';
-
-        // Set Default header (opsional, karena hub sudah ada)
+        // MORTA FIX: HANYA tampilkan Navigation Hub jika INI ADALAH INISIALISASI
+        // (result kosong, forceDefault=false). Jika forceDefault=true (dari sub-view),
+        // kita hanya reset header.
+        if (!result && !forceDefault) {
+             document.getElementById('navigationHub').style.display = 'block';
+        }
+        
+        // Set Default header
         const headerDiv = document.getElementById('resultHeader');
         const headerTextContent = document.getElementById('headerTextContent'); 
         headerDiv.className = 'Default';
         const defaultText = HOVER_TEXT_MAP['Default'].default;
         headerTextContent.textContent = defaultText; 
         
-        // Bersihkan konten lama (penting jika navigasi dari result ke hub)
+        // Bersihkan konten lama 
         document.getElementById('claimDisplay').textContent = '';
         document.getElementById('reasoningBox').innerHTML = '';
         document.getElementById('linkBox').innerHTML = '';
         
-        // Set up hover for default header (tetap dipertahankan untuk tampilan di hub)
+        // Set up hover for default header
         const hoverText = HOVER_TEXT_MAP['Default'].hover;
         const fadeDuration = 200;
 
@@ -414,6 +448,11 @@ function switchTab(tabName) {
         if (tabFCButton) tabFCButton.classList.remove('active');
         if (tabHButton) tabHButton.classList.add('active');
 
+        // Sembunyikan result dan dynamic input saat pindah ke history
+        document.getElementById('resultOutput').style.display = 'none';
+        document.getElementById('dynamicContent').style.display = 'none';
+        document.getElementById('navigationHub').style.display = 'none';
+
         renderHistory();
 
     } else { // 'factCheck'
@@ -421,7 +460,7 @@ function switchTab(tabName) {
         historyTab.style.display = 'none';
         
         // MORTA FIX: Saat kembali ke FactCheck tab, panggil getFactCheckResult
-        // Ini akan menentukan apakah harus menampilkan Hub atau Result/Upload terakhir.
+        // Ini akan menentukan apakah harus menampilkan Hub atau Result terakhir.
         getFactCheckResult(); 
 
         if (tabHButton) tabHButton.classList.remove('active');
@@ -433,7 +472,7 @@ async function renderHistory() {
     const historyList = document.getElementById('historyList');
     const status = document.getElementById('historyStatus');
 
-    // ... (rest of renderHistory remains the same) ...
+    // ... (rest of renderHistory logic remains the same) ...
     historyList.innerHTML = '';
     status.textContent = 'Loading history...';
     status.style.display = 'block';
@@ -495,14 +534,15 @@ async function clearHistory() {
 }
 // --- HISTORY LOGIC (END) ---
 
-// --- UPLOAD HANDLER (No Significant Change) ---
+// --- UPLOAD HANDLER (Used for Multimodal/Image Check) ---
 function setupUploadListener() {
+    // MORTA FIX: Harus mencari elemen di dalam dynamicContent setelah dimuat
     const fileInput = document.getElementById('imageFileInput');
     const textInput = document.getElementById('textClaimInput');
     const uploadStatus = document.getElementById('uploadStatus');
     const submitButton = document.getElementById('submitUploadButton');
 
-    if (!submitButton) return;
+    if (!submitButton || !fileInput || !textInput) return; // Guard for dynamic loading
 
     submitButton.addEventListener('click', async () => {
         const file = fileInput.files[0];
@@ -586,11 +626,12 @@ function readFileAsBase64(file) {
 
 // MORTA FIX: Function baru untuk mengirim TEXT-ONLY CLAIM
 function setupTextCheckListener() {
+    // MORTA FIX: Harus mencari elemen di dalam dynamicContent setelah dimuat
     const textInput = document.getElementById('textClaimInputOnly');
     const submitButton = document.getElementById('submitTextButton');
     const statusDiv = document.getElementById('textStatus');
     
-    if (!submitButton) return;
+    if (!submitButton || !textInput) return;
 
     submitButton.addEventListener('click', () => {
         const textClaim = textInput.value.trim();
@@ -656,6 +697,19 @@ function setupWelcomeMessage() {
     }
 }
 
+// MORTA FIX: Listener untuk tombol Back di Input Pages
+function setupBackButtonListener() {
+    // MORTA FIX: Mencari tombol yang sudah dimuat secara dinamis
+    const backButton = document.getElementById('backToHubButton');
+    if (!backButton) return;
+
+    backButton.addEventListener('click', () => {
+        // Menggunakan showView tanpa argumen akan kembali ke 'hub' (Navigation Hub)
+        showView('hub'); 
+    });
+}
+
+
 // --- INITIALIZATION (UPDATED LISTENER) ---
 function initializePopup() {
     const splash = document.getElementById('splashScreen');
@@ -684,7 +738,6 @@ function initializePopup() {
             if (main) main.classList.add('visible');
 
             getFactCheckResult();
-            setupUploadListener();
         } else {
             chrome.storage.local.set({ 'hasSeenSplash': true });
 
@@ -698,7 +751,6 @@ function initializePopup() {
                     if (splash) splash.style.display = 'none';
                     if (main) main.classList.add('visible');
                     getFactCheckResult();
-                    setupUploadListener();
                 }, fadeOutTime);
             };
 
@@ -715,14 +767,21 @@ function initializePopup() {
 
         document.getElementById('tabFactCheck').addEventListener('click', () => switchTab('factCheck'));
         document.getElementById('tabHistory').addEventListener('click', () => switchTab('history'));
-        switchTab('factCheck');
+        
+        // MORTA FIX: Listener untuk New Check Button di Result Output
+        const newCheckButton = document.getElementById('newCheckButton');
+        if (newCheckButton) {
+            newCheckButton.addEventListener('click', () => {
+                showView('hub'); // Rute kembali ke Navigation Hub
+            });
+        }
+        
+        switchTab('factCheck'); // Set default view
 
     });
 
     setupNavigationHub(); 
     setupWelcomeMessage();
-    setupUploadListener();
-    setupTextCheckListener(); // Panggil handler baru
     
     document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 

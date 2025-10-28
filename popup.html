@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <title>Veritas AI</title>
     <style>
+        /* ... (CSS tidak ada perubahan, kecuali penambahan #resultOutput button#newCheckButton) ... */
+
         :root {
             --primary: #4285F4;
             --secondary: #34A853;
@@ -15,7 +17,7 @@
             --radius: 10px;
         }
 
-        /* FONT DECLARATION  */
+        /* FONT DECLARATION */
         @font-face {
             font-family: 'ParaRegular';
             src: url('fonts/ParaRegular.ttf') format('truetype');
@@ -119,11 +121,6 @@
             align-items: center;
             gap: 0.5rem;
             z-index: 30;
-        }
-
-        .topLogo {
-            width: 60px;
-            height: 60px;
         }
 
         .topText {
@@ -308,6 +305,24 @@
             display: none;
         }
 
+        /* MORTA FIX: New Check Button Style on Result Page */
+        #resultOutput button#newCheckButton {
+            background: var(--primary) !important;
+            color: white !important;
+            width: auto !important;
+            padding: 5px 10px !important;
+            margin-bottom: 10px;
+            float: right;
+            text-align: right;
+            font-size: 15px;
+        }
+        
+        #resultOutput #resultActions {
+            overflow: hidden; /* Clear float */
+            margin-top: 10px; /* Jarak dari linkBox */
+            margin-bottom: 5px; /* Jarak ke bawah */
+        }
+
         #claimDisplay {
             font-style: italic;
             font-family: sans-serif;
@@ -465,27 +480,19 @@
             }
         }
 
-        /* UPLOAD SECTION */
-        #uploadSection {
-            border-top: 1px solid #eee;
+        /* =================================================== */
+        /* DYNAMIC INPUT FORM STYLES (Berlaku untuk 3 file HTML baru) */
+        /* =================================================== */
+
+        .dynamic-input-form {
             margin-top: 18px;
-            padding: 12px 0;
-            flex-shrink: 0;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: var(--radius);
-        }
-        
-        /* MORTA FIX: Text Check Section Style */
-        #textCheckSection {
-            margin-top: 18px;
-            padding: 12px 12px 0 12px; /* Disesuaikan agar tombol menempel di padding bawah maincontent */
+            /* Disesuaikan agar tombol menempel di padding bawah maincontent */
+            padding: 12px 12px 0 12px;
             background: rgba(240, 240, 255, 0.9);
             border-radius: var(--radius);
         }
-        
-        /* MORTA FIX: CSS untuk textarea dan input harus berlaku untuk semua section input */
-        #textCheckSection textarea,
-        #uploadSection textarea {
+
+        .dynamic-input-form textarea {
             width: 100%;
             height: 70px;
             resize: none;
@@ -497,16 +504,22 @@
             margin-bottom: 8px;
         }
 
-        /* MORTA FIX: CSS untuk tombol di TextCheckSection */
-        #textCheckSection button {
+        /* Semua tombol di dalam dynamic-input-form */
+        .dynamic-input-form button {
             background: var(--primary);
             color: #fff;
             width: 100%;
             padding: 10px;
-            margin-bottom: 12px; /* Margin bawah untuk memisahkan dari bottom padding mainContent */
+            /* Margin bawah untuk memisahkan dari bottom padding mainContent */
+            margin-bottom: 12px;
+            border: none;
+            font-weight: 600;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        #textCheckSection button:hover {
+        .dynamic-input-form button:hover {
             background: #3367d6;
         }
 
@@ -537,21 +550,14 @@
             /* PENTING: Netralisasi background default browser */
         }
 
-        /* UPLOAD & CLEAR HISTORY BUTTONS (STYLE SPESIFIK) */
-        #uploadSection button,
+        /* CLEAR HISTORY BUTTON (OVERRIDE WARNA MERAH) */
         #historyTab button {
-            /* Mengaplikasikan style visual untuk tombol yang BUKAN tab nav */
             background: var(--primary);
             color: #fff;
             width: 100%;
             padding: 10px;
         }
 
-        #uploadSection button:hover {
-            background: #3367d6;
-        }
-
-        /* CLEAR HISTORY BUTTON (OVERRIDE WARNA MERAH) */
         #clearHistoryButton {
             background: var(--danger) !important;
         }
@@ -824,32 +830,18 @@
                     </div>
 
                     <div id="resultOutput" style="display:none;">
+                        
                         <div id="claimDisplay"></div>
                         <div id="reasoningBox"></div>
                         <div id="linkBox"></div>
-                    </div>
-
-                    <div id="textCheckSection" style="display:none;">
-                        <h4 style="color: var(--primary); font-size: 18px; margin-bottom: 5px;">Input Claim for Fact Check:</h4>
-                        <textarea id="textClaimInputOnly" placeholder="Enter the full claim you want to verify here..."></textarea>
-                        <button id="submitTextButton">Verify Claim</button>
-                        <div id="textStatus" style="font-size: 13px; margin-top: 5px;"></div>
-                    </div>
-
-
-                    <div id="uploadSection" style="display:none;">
-                        <h4 style="color: var(--primary); font-size: 18px;">Fact Check Image + Context:</h4>
-                        <textarea id="textClaimInput" placeholder="Enter claim related to the image... (Contextual Text)"></textarea>
-                        <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
-                        <button id="submitUploadButton">Analyze Image</button>
-                        <div id="uploadStatus"></div>
-                    </div>
-
-                    <div id="urlCheckSection" style="display:none; padding: 12px; margin-top: 18px; background: rgba(240, 240, 255, 0.9); border-radius: var(--radius); text-align: center;">
-                        <h4 style="color: var(--primary); font-size: 20px; margin-bottom: 5px;">URL Fact Check</h4>
-                        <p style="font-size: 15px; color: #666;">**Feature Coming Soon!** Currently not available in the MVP.</p>
-                    </div>
-
+                        
+                        <div id="resultActions">
+                            <button id="newCheckButton" style="display: none;">&#8592; Start New Check</button>
+                        </div>
+                        </div>
+                    
+                    <div id="dynamicContent" style="display:none;">
+                        </div>
                 </div>
 
                 <div id="historyTab" style="display:none; padding-top: 10px;">
