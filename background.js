@@ -1,4 +1,4 @@
-// background.js (CLEAN V10: Prompt Logic Extracted to prompt.js)
+// background.js (CLEAN V11: Consolidated Listeners & Text-Only Activation)
 
 import {
     CLOUD_PROMPT_TEXT_ONLY,
@@ -165,8 +165,6 @@ chrome.runtime.onInstalled.addListener(() => {
         contexts: ["image"]
     });
 
-    // SUMMARIZATION MENU REMOVED - Focusing on stable features.
-
     console.log(
         "Veritas Text & Multimodal Context Menus created."
     );
@@ -181,8 +179,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
     const selectedText = info.selectionText;
     const currentTabId = tab.id;
-
-    // SUMMARIZATION LOGIC REMOVED. Only Fact Check logic remains.
 
     // --- HANDLE EXISTING FACT CHECK ACTIONS ---
     if (info.menuItemId === "veritasFactCheckText" || info.menuItemId === "veritasFactCheckMultimodal") {
@@ -239,7 +235,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         } else {
             // Run Multimodal API Call 
             const imageUrl = info.srcUrl;
-            // REMOVED AUTOPASTE CLAIM: Force user to input claim for multimodal checks
             // The selected text is ignored here. We use a placeholder string.
             const text = "USER_MUST_PROVIDE_CLAIM"; 
             result = await runFactCheckMultimodalUrl(imageUrl, text);
@@ -260,55 +255,18 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 // ====================================================================
-// FUNCTION 4: LISTENER FOR UPLOAD FROM POPUP
-// Listener for messages from the popup (e.g., direct image upload)
+// FUNCTION 4, 9, etc. CONSOLIDATED: LISTENER FOR POPUP/UPLOAD/SETTINGS
+// Consolidated all messaging from popup.js and settings.js into one listener.
 // ====================================================================
 
 chrome.runtime.onMessage.addListener(
     (request, sender, sendResponse) => {
-        if (request.action === 'multimodalUpload') {
-            const { base64, mimeType, claim } = request;
 
-            console.log(
-                "[Veritas Upload] Received Base64 data from popup."
-            );
-
-            runFactCheckMultimodalDirect(base64, mimeType, claim).then(result => {
-                sendFactCheckNotification(claim, result.flag !== 'Error');
-                chrome.storage.local.set({ 'lastFactCheckResult': result });
-
-                chrome.runtime.sendMessage({
-                    action: 'updateFinalResult',
-                    resultData: result
-                });
-                sendResponse({ success: true, result: result });
-
-            }).catch(error => {
-                const errorResult = { flag: "Error", message: `Upload Fact Check Failed: ${error.message}`, claim: claim };
-                sendFactCheckNotification(claim, false);
-                chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
-
-                chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
-                sendResponse({ success: false, error: errorResult });
-            });
-
-            return true; // Indicates an asynchronous response
-        }
-        if (request.action === 'testGeminiKey') {
-            const apiKeyToTest = request.apiKey;
-
-            // Calls the API key test logic
-            testGeminiKeyLogic(apiKeyToTest).then(response => {
-                sendResponse(response);
-            });
-            return true; // Indicates an asynchronous response
-        }
+        // --- 1. POPUP: TEXT ONLY FACT CHECK (ACTIVATED) ---
         if (request.action === 'textOnlyFactCheck') {
             const claim = request.claim;
 
-            console.log(
-                "[Veritas Popup] Received Text-Only claim for processing."
-            );
+            console.log("[Veritas Popup] Received Text-Only claim for processing.");
 
             // 1. Set Loading state in storage (for popup display)
             const loadingResult = {
@@ -339,6 +297,47 @@ chrome.runtime.onMessage.addListener(
                 sendResponse({ success: false, error: errorResult });
             });
 
+            return true; // Indicates an asynchronous response
+        }
+
+        // --- 2. POPUP: MULTIMODAL UPLOAD (Existing) ---
+        if (request.action === 'multimodalUpload') {
+            const { base64, mimeType, claim } = request;
+
+            console.log(
+                "[Veritas Upload] Received Base64 data from popup."
+            );
+
+            runFactCheckMultimodalDirect(base64, mimeType, claim).then(result => {
+                sendFactCheckNotification(claim, result.flag !== 'Error');
+                chrome.storage.local.set({ 'lastFactCheckResult': result });
+
+                chrome.runtime.sendMessage({
+                    action: 'updateFinalResult',
+                    resultData: result
+                });
+                sendResponse({ success: true, result: result });
+
+            }).catch(error => {
+                const errorResult = { flag: "Error", message: `Upload Fact Check Failed: ${error.message}`, claim: claim };
+                sendFactCheckNotification(claim, false);
+                chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
+
+                chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
+                sendResponse({ success: false, error: errorResult });
+            });
+
+            return true; // Indicates an asynchronous response
+        }
+        
+        // --- 3. SETTINGS: TEST API KEY (Existing) ---
+        if (request.action === 'testGeminiKey') {
+            const apiKeyToTest = request.apiKey;
+
+            // Calls the API key test logic
+            testGeminiKeyLogic(apiKeyToTest).then(response => {
+                sendResponse(response);
+            });
             return true; // Indicates an asynchronous response
         }
     }
@@ -776,19 +775,3 @@ async function testGeminiKeyLogic(apiKey) {
         return { success: false, message: `Network/Fetch Error: ${error.message}` };
     }
 }
-
-// Listener for Test Key from settings.js
-chrome.runtime.onMessage.addListener(
-    (request, sender, sendResponse) => {
-        // ... (Existing 'multimodalUpload' listener) ...
-
-        if (request.action === 'testGeminiKey') {
-            const apiKeyToTest = request.apiKey;
-
-            testGeminiKeyLogic(apiKeyToTest).then(response => {
-                sendResponse(response);
-            });
-            return true; // Asynchronous response requires returning true
-        }
-    }
-);

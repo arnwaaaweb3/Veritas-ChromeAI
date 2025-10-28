@@ -709,7 +709,6 @@ function setupBackButtonListener() {
     });
 }
 
-
 // --- INITIALIZATION (UPDATED LISTENER) ---
 function initializePopup() {
     const splash = document.getElementById('splashScreen');
@@ -718,6 +717,7 @@ function initializePopup() {
 
     const splashDuration = 5000;
     const fadeOutTime = 500;
+    setupUrlCheckListener();
 
     chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
 
@@ -785,4 +785,62 @@ function initializePopup() {
     
     document.getElementById('clearHistoryButton').addEventListener('click', clearHistory);
 
+}
+
+// MORTA FIX: Tambahkan fungsi baru untuk URL CHECK LISTENER
+function setupUrlCheckListener() {
+    const claimInput = document.getElementById('urlClaimInput');
+    const submitButton = document.getElementById('submitUrlButton');
+    const statusDiv = document.getElementById('urlStatus');
+    
+    if (!submitButton || !claimInput) return;
+
+    submitButton.addEventListener('click', async () => {
+        const claim = claimInput.value.trim();
+
+        if (claim.length < 5) {
+            statusDiv.textContent = '❌ Claim must be at least 5 characters.';
+            statusDiv.style.color = 'red';
+            return;
+        }
+
+        submitButton.disabled = true;
+        claimInput.disabled = true;
+
+        statusDiv.textContent = '⏳ Analyzing current page and claim...';
+        statusDiv.style.color = 'blue';
+
+        // 1. Get current active tab ID
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const currentTabId = tabs[0].id;
+        
+        if (!currentTabId) {
+             statusDiv.textContent = '❌ Could not find active tab.';
+             submitButton.disabled = false;
+             claimInput.disabled = false;
+             return;
+        }
+
+        // 2. Inject content script to scrape page data
+        try {
+            await chrome.scripting.executeScript({
+                target: { tabId: currentTabId },
+                files: ['content_script_url.js'] // INI FILE BARU KAMU
+            });
+            
+            // 3. Set loading state immediately
+            const loadingResult = { flag: 'loading', claim: claim, message: "Veritas is analyzing page context and claim..." };
+            chrome.storage.local.set({ 'lastFactCheckResult': loadingResult });
+            renderLoadingState(document.getElementById('resultOutput'), claim);
+            
+            // Background script akan menangani hasil scraping melalui listener 'urlContentScraped'
+            statusDiv.textContent = '⏳ Page content successfully captured. Sending to AI...';
+
+        } catch (error) {
+            console.error("URL Injection/Execution Failed:", error);
+            statusDiv.textContent = `❌ Failed to inject script: ${error.message}`;
+            submitButton.disabled = false;
+            claimInput.disabled = false;
+        }
+    });
 }
