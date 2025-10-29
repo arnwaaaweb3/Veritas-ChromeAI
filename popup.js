@@ -121,6 +121,7 @@ function setupNavigationHub() {
 // ==============================================================================
 
 // Utility to parse Markdown results (according to the new format in background.js)
+// Utility to parse Markdown results (according to the new format in background.js)
 function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const rawMessage = result.message;
 
@@ -134,18 +135,17 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     document.getElementById('loadingState').style.display = 'none';
     resultOutputDiv.style.display = 'block';
     
-    // MORTA FIX: Tampilkan New Check Button
+    // Tampilkan New Check Button
     const newCheckButton = document.getElementById('newCheckButton');
     if (newCheckButton) {
         newCheckButton.style.display = 'block';
     }
 
-    // MORTA FIX: Sembunyikan Hub dan Dynamic Content
+    // Sembunyikan Hub dan Dynamic Content
     document.getElementById('navigationHub').style.display = 'none';
     document.getElementById('dynamicContent').style.display = 'none';
     
     const headerDiv = document.getElementById('resultHeader');
-    // MORTA FIX: Target inner element untuk manipulasi teks/fade
     const headerTextContent = document.getElementById('headerTextContent'); 
     
     const claimDiv = document.getElementById('claimDisplay');
@@ -158,20 +158,23 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     const reasonSplit = rawMessage.split('Reason:');
     const linkSplit = (reasonSplit.length > 1) ? reasonSplit[1].split('Link:') : [rawMessage, ''];
 
-    const flagClaimRaw = reasonSplit[0].trim();
-    const rawReasonings = linkSplit[0].trim();
+    let flagClaimRaw = reasonSplit[0].trim(); 
+    let rawReasonings = linkSplit[0].trim();
     const rawLinks = (linkSplit.length > 1) ? linkSplit[1].trim() : "";
+    
+    // ==============================================================================
 
     // 1. Render Header and Claim
-    // MORTA FIX: Ambil teks display murni dari helper function
+    // Ambil teks display murni dari helper function
     const displayHeaderText = getDisplayFlag(result.flag);
 
     // Menetapkan class
     headerDiv.className = result.flag;
-    headerTextContent.textContent = displayHeaderText; // CHANGED: Set text ke inner element
+    headerTextContent.textContent = displayHeaderText;
 
-    // == MORTA FIX: LOGIC HOVER UNIVERSAL (untuk Hijau, Merah, Kuning, Error) ==
-    // 1. Hapus listener lama (best practice)
+    // ... (Logika Hover tetap sama) ...
+    
+    // Hapus listener lama (best practice)
     headerDiv.onmouseover = null;
     headerDiv.onmouseout = null; 
 
@@ -197,7 +200,6 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
             }, fadeDuration);
         };
     } 
-    // =========================================================================================
 
     // Parsing claim from highlighted claim
     const claimMatch = flagClaimRaw.match(/\*\*(.*?)\*\*/);
@@ -205,6 +207,7 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
 
     // 2. Render Reasonings (Convert Markdown List to HTML List)
     let reasonsHTML = '<p>Reason:</p><ul>';
+    // Gunakan rawReasonings langsung
     const reasonLines = rawReasonings.split('\n').filter(line => line.startsWith('-'));
 
     if (reasonLines.length > 0) {
@@ -215,15 +218,21 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
             reasonsHTML += `<li>${itemContent}</li>`;
         });
     } else {
-        reasonsHTML += `<li>(Unstructured/undetected reasoning from AI)</li>`;
+        // Jika tidak ada alasan yang diformat list
+        if (rawReasonings) { 
+             reasonsHTML += `<li>${rawReasonings.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`;
+        } else {
+             reasonsHTML += `<li>(Unstructured/undetected reasoning from AI)</li>`;
+        }
     }
     reasonsHTML += '</ul>';
     reasonDiv.innerHTML = reasonsHTML;
 
-
     // 3. Render Links (Convert Markdown Link to HTML List)
     let linksHTML = '<p>Link:</p><ul>';
-    const linkLines = rawLinks.split('\n').filter(line => line.startsWith('-'));
+    
+    // Gunakan rawLinks mentah
+    const linkLines = rawLinks.split('\n').filter(line => line.startsWith('-') || line.startsWith('http')); // MORTA FIX: Sertakan baris URL yang dimulai dengan 'http'
     const linkRegex = /\[(.*?)\]\((.*?)\)/g;
     const MAX_LINKS_VISIBLE = 3; 
 
@@ -234,13 +243,45 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
             const hiddenStyle = isHidden ? ' style="display: none;"' : ''; 
 
             const linkMatch = linkRegex.exec(line);
+            
+            // MORTA FIX: Teks link yang ditampilkan
+            let displayText = line.substring(1).trim(); 
+            let urlHref = null;
+
             if (linkMatch && linkMatch.length >= 3) {
-                // LinkMatch[1] = title, LinkMatch[2] = URL
-                linksHTML += `<li${hiddenStyle}><a href="${linkMatch[2]}" target="_blank">${linkMatch[1]}</a></li>`;
-            } else {
-                // If link format fails, display as plain text
-                linksHTML += `<li${hiddenStyle}>${line.substring(1).trim()}</li>`;
+                // Kasus A: Jika Terdeteksi sebagai Markdown Link Valid (sudah ada URL dan Title)
+                displayText = linkMatch[1]; 
+                urlHref = linkMatch[2];
+            } else if (line.startsWith('- Context based on URL:')) {
+                // Kasus B: Jika itu adalah baris Context URL (seperti format baru kita)
+                // Kita biarkan displayText mengandung teks penuh, tapi kita rapikan tampilannya
+                
+                // Cari baris selanjutnya yang berisi URL
+                let fullText = line.substring(1).trim();
+                let nextLine = linkLines[index + 1]; // Asumsi URL ada di baris berikutnya
+                
+                if (nextLine && nextLine.startsWith('http')) {
+                    // Gabungkan label Context dan URL
+                    fullText = `${line.substring(1).trim()}\n${nextLine.trim()}`;
+                    urlHref = nextLine.trim();
+                    linkLines[index + 1] = ''; // Hapus baris URL agar tidak diproses dua kali
+                }
+                displayText = fullText;
+            } else if (line.startsWith('http')) {
+                 // Kasus C: Baris ini hanyalah URL itu sendiri (dibuat di background.js, tapi tidak diformat sebagai list item)
+                 displayText = line.trim();
+                 urlHref = line.trim();
             }
+
+            // Render List Item
+            if (urlHref) {
+                // Link yang bisa diklik (Contextual URL)
+                linksHTML += `<li${hiddenStyle}><a href="${urlHref}" target="_blank" style="word-break: break-all; white-space: pre-wrap; font-weight: bold;">${displayText}</a></li>`;
+            } else {
+                // Teks biasa (misal: "No external sources detected")
+                linksHTML += `<li${hiddenStyle} style="word-break: break-all; white-space: pre-wrap;">${displayText}</li>`;
+            }
+
             linkRegex.lastIndex = 0; // Reset regex index
         });
     } else {
@@ -249,7 +290,7 @@ function parseAndRenderResult(result, claimText, resultOutputDiv) {
     linksHTML += '</ul>';
     linkDiv.innerHTML = linksHTML;
 
-    // == MORTA FIX: Logic for Show More/Hide Less Button ==
+    // == Logic for Show More/Hide Less Button ==
     // Hanya tampilkan tombol jika jumlah link lebih dari batas yang terlihat
     if (linkLines.length > MAX_LINKS_VISIBLE) {
         const listElement = linkDiv.querySelector('ul');
@@ -485,15 +526,13 @@ async function renderHistory() {
 
         // Get brief summary from reasoning (text after Flag)
         const summary = item.message.split('Reason:')[0].replace(/\*\*(.*?)\*\*/, '').trim().substring(0, 100) + '...';
-
         const date = new Date(item.timestamp).toLocaleString();
+        const displayFlagText = getDisplayFlag(item.flag);
 
-        // MORTA FIX: Menghapus span.flag-symbol di history karena kita pakai border-left-color.
         itemDiv.innerHTML = `
             <span class="history-timestamp">${date}</span>
             <div class="history-claim">${item.claim.substring(0, 50)}...</div>
-            <div style="font-size: 12px; color: #444;">${summary}</div>
-            <span class="history-flag ${item.flag}">${item.flag.toUpperCase()}</span>
+            <span class="history-flag ${item.flag}">${displayFlagText}</span>
         `;
 
         itemDiv.addEventListener('click', () => {
@@ -530,7 +569,7 @@ async function clearHistory() {
 function setupUploadListener() {
     // MORTA FIX: Harus mencari elemen di dalam dynamicContent setelah dimuat
     const fileInput = document.getElementById('imageFileInput');
-    const textInput = document.getElementById('textClaimInput');
+    const textInput = document.getElementById('textClaimInputOnly');
     const uploadStatus = document.getElementById('uploadStatus');
     const submitButton = document.getElementById('submitUploadButton');
 
@@ -571,6 +610,7 @@ function setupUploadListener() {
                 mimeType: mimeType,
                 claim: textClaim
             }, (response) => {
+                // Diaktifkan kembali setelah Background Service Worker merespons (sukses/gagal API)
                 submitButton.disabled = false;
                 fileInput.disabled = false;
                 textInput.disabled = false;
@@ -584,6 +624,19 @@ function setupUploadListener() {
                     uploadStatus.style.color = 'red';
                 }
             });
+            
+            // [MORTA FIX]: FAIL-SAFE CHECK untuk memastikan tombol tidak macet jika Service Worker mati/channel putus.
+            if (chrome.runtime.lastError) {
+                console.error("Morta SOS: Channel Failure - Re-enabling buttons.", chrome.runtime.lastError);
+                uploadStatus.textContent = `❌ ERROR: Service Worker inactive. Try reopening the popup or reloading the extension.`;
+                uploadStatus.style.color = 'red';
+                
+                // Re-enable button untuk kegagalan channel (synchronous failure)
+                submitButton.disabled = false; 
+                fileInput.disabled = false;
+                textInput.disabled = false;
+            }
+
 
             renderLoadingState(document.getElementById('resultOutput'), textClaim);
 
@@ -709,7 +762,7 @@ function initializePopup() {
 
     const splashDuration = 5000;
     const fadeOutTime = 500;
-    setupUrlCheckListener();
+    // setupUrlCheckListener(); // Tidak perlu dipanggil di sini, karena dipanggil saat loadAndSetupView
 
     chrome.runtime.onMessage.addListener(handleLiveResultUpdate);
 
@@ -779,17 +832,29 @@ function initializePopup() {
 
 }
 
-// MORTA FIX: Tambahkan fungsi baru untuk URL CHECK LISTENER
+// MORTA FIX: Tambahkan fungsi baru untuk URL CHECK LISTENER (REVISI)
 function setupUrlCheckListener() {
+    // MORTA FIX: Mengambil dua elemen input yang baru
+    const urlInput = document.getElementById('urlAddressInput');
     const claimInput = document.getElementById('urlClaimInput');
     const submitButton = document.getElementById('submitUrlButton');
     const statusDiv = document.getElementById('urlStatus');
     
-    if (!submitButton || !claimInput) return;
+    // Check keberadaan ketiga elemen
+    if (!submitButton || !urlInput || !claimInput) return;
 
     submitButton.addEventListener('click', async () => {
+        const urlAddress = urlInput.value.trim(); // Ambil nilai URL
         const claim = claimInput.value.trim();
 
+        // Validasi URL (dasar)
+        if (urlAddress.length < 10 || (!urlAddress.startsWith('http://') && !urlAddress.startsWith('https://'))) {
+            statusDiv.textContent = '❌ Please enter a valid URL (must start with http:// or https://).';
+            statusDiv.style.color = 'red';
+            return;
+        }
+
+        // Validasi Claim
         if (claim.length < 5) {
             statusDiv.textContent = '❌ Claim must be at least 5 characters.';
             statusDiv.style.color = 'red';
@@ -797,42 +862,34 @@ function setupUrlCheckListener() {
         }
 
         submitButton.disabled = true;
+        urlInput.disabled = true;
         claimInput.disabled = true;
 
-        statusDiv.textContent = '⏳ Analyzing current page and claim...';
+        statusDiv.textContent = '⏳ Sending URL and Claim to AI...';
         statusDiv.style.color = 'blue';
 
-        // 1. Get current active tab ID
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        const currentTabId = tabs[0].id;
+        // 1. Set loading state immediately
+        const loadingResult = { flag: 'loading', claim: claim, message: `Veritas is analyzing content from ${urlAddress}...` };
+        chrome.storage.local.set({ 'lastFactCheckResult': loadingResult });
+        renderLoadingState(document.getElementById('resultOutput'), claim);
         
-        if (!currentTabId) {
-             statusDiv.textContent = '❌ Could not find active tab.';
-             submitButton.disabled = false;
-             claimInput.disabled = false;
-             return;
-        }
-
-        // 2. Inject content script to scrape page data
-        try {
-            await chrome.scripting.executeScript({
-                target: { tabId: currentTabId },
-                files: ['content_script_url.js'] // INI FILE BARU KAMU
-            });
-            
-            // 3. Set loading state immediately
-            const loadingResult = { flag: 'loading', claim: claim, message: "Veritas is analyzing page context and claim..." };
-            chrome.storage.local.set({ 'lastFactCheckResult': loadingResult });
-            renderLoadingState(document.getElementById('resultOutput'), claim);
-            
-            // Background script akan menangani hasil scraping melalui listener 'urlContentScraped'
-            statusDiv.textContent = '⏳ Page content successfully captured. Sending to AI...';
-
-        } catch (error) {
-            console.error("URL Injection/Execution Failed:", error);
-            statusDiv.textContent = `❌ Failed to inject script: ${error.message}`;
+        // 2. Kirim aksi BARU: 'urlFactCheckWithClaim' ke background.js
+        chrome.runtime.sendMessage({
+            action: 'urlFactCheckWithClaim', 
+            url: urlAddress, // Kirim URL yang diinput
+            claim: claim     // Kirim Claim
+        }, (response) => {
+            // Re-enable buttons setelah background.js merespons (sukses/gagal)
             submitButton.disabled = false;
+            urlInput.disabled = false;
             claimInput.disabled = false;
-        }
+            statusDiv.textContent = ''; 
+
+            if (chrome.runtime.lastError) {
+                 console.error("Morta SOS: Channel Failure - Re-enabling buttons.", chrome.runtime.lastError);
+                 statusDiv.textContent = `❌ ERROR: Service Worker inactive. Try reopening the popup or reloading the extension.`;
+                 statusDiv.style.color = 'red';
+            }
+        });
     });
 }

@@ -332,40 +332,50 @@ chrome.runtime.onMessage.addListener(
             return true; // Indicates an asynchronous response
         }
         
-        // --- 3. URL: RECEIVE SCRAPED CONTENT (NEW LISTENER) ---
-        if (request.action === 'urlContentScraped') {
-            const { data } = request;
-            
-            console.log("[Veritas URL] Received scraped content from active tab.");
+        // --- MORTA FIX: 3. POPUP: URL FACT CHECK WITH MANUAL URL & CLAIM ---
+        if (request.action === 'urlFactCheckWithClaim') {
+            const { url, claim } = request;
 
-            // Dapatkan claim yang disimpan saat tombol URL diklik (claim disimpan di popup.js)
-            chrome.storage.local.get(['lastFactCheckResult'], async (result) => {
-                const claim = result.lastFactCheckResult ? result.lastFactCheckResult.claim : 'Claim not found (Contextual URL check)';
-                
-                // --- MORTA FIX: HANDLE SCRAPING ERROR ---
-                if (data.error) {
-                    const errorResult = { flag: "Error", message: `URL Fact Check Failed: Scraper Error: ${data.error}`, claim: claim };
-                    chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
-                    chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
-                    sendResponse({ success: false });
-                    return;
-                }
+            console.log("[Veritas Popup] Received URL & Claim for processing.");
 
-                // Jalankan Core Logic untuk URL Context
-                const finalResult = await runFactCheckUrlContext(claim, data.textContent, data.pageUrl);
+            // 1. Set Loading state in storage (for popup display)
+            const loadingResult = {
+                flag: 'loading',
+                claim: claim,
+                message: `Veritas is analyzing content from ${url}...`
+            };
+            chrome.storage.local.set({ 'lastFactCheckResult': loadingResult });
 
-                sendFactCheckNotification(claim, finalResult.flag !== 'Error');
-                chrome.storage.local.set({ 'lastFactCheckResult': finalResult });
+            // 2. Run the new Manual URL Fact Check Logic
+            runFactCheckUrlManual(url, claim).then(result => {
+                // 3. Update result and notify popup
+                sendFactCheckNotification(claim, result.flag !== 'Error');
+                chrome.storage.local.set({ 'lastFactCheckResult': result });
 
                 chrome.runtime.sendMessage({
                     action: 'updateFinalResult',
-                    resultData: finalResult
+                    resultData: result
                 });
-                sendResponse({ success: true, result: finalResult });
+                sendResponse({ success: true, result: result });
+
+            }).catch(error => {
+                const errorResult = { flag: "Error", message: `Manual URL Fact Check Failed: ${error.message}`, claim: claim };
+                sendFactCheckNotification(claim, false);
+                chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
+
+                chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
+                sendResponse({ success: false, error: errorResult });
             });
-            
-            return true; // Asynchronous response
+
+            return true; // Indicates an asynchronous response
         }
+        
+        // --- MORTA FIX: REMOVED OLD 'urlContentScraped' LISTENER ---
+        /*
+        if (request.action === 'urlContentScraped') {
+            // ... (Logic removed as we are now doing content fetching in the background)
+        }
+        */
 
         // --- 4. SETTINGS: TEST API KEY (Existing) ---
         if (request.action === 'testGeminiKey') {
@@ -404,13 +414,13 @@ async function executeGeminiCall(claim, contents) {
     try {
         const response = await fetch(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": geminiApiKey
-            },
-            body: JSON.stringify(payload)
-        });
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": geminiApiKey
+                },
+                body: JSON.stringify(payload)
+            });
 
         const data = await response.json();
 
@@ -601,6 +611,91 @@ async function runFactCheckHybrid(text) {
 }
 
 // ====================================================================
+// FUNCTION X: RUN FACT CHECK MANUAL URL (NEW FUNCTION)
+// Core logic for processing MANUALLY INPUTTED URL content and sending it to Gemini.
+// ====================================================================
+// ====================================================================
+// MORTA FIX: FUNCTION X: RUN FACT CHECK MANUAL URL (NOW WITH GROUNDING)
+// ====================================================================
+async function runFactCheckUrlManual(url, claim) {
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    const geminiApiKey = resultStorage.geminiApiKey;
+    
+    if (!geminiApiKey) {
+        return {
+            flag: "Error",
+            message: "Gemini API Key is not set. Manual URL Fact Check requires Cloud access.",
+            claim: claim
+        };
+    }
+    
+    let pageContent = "";
+    let finalUrl = url;
+
+    // --- Content Fetching Logic ---
+    try {
+        console.log(`[Veritas URL Manual] Fetching content from: ${url}`);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch URL content (Status: ${response.status} ${response.statusText})`);
+        }
+        
+        // Get the final URL in case of redirects
+        finalUrl = response.url; 
+        
+        // Read HTML content as text
+        const htmlText = await response.text();
+
+        // Limit content size for model payload
+        const MAX_CONTENT_LENGTH = 15000; 
+        pageContent = htmlText.substring(0, MAX_CONTENT_LENGTH);
+
+    } catch (error) {
+        console.error(`[Veritas URL Manual] Fetch/Parsing Error for ${url}:`, error);
+        return {
+            flag: "Error",
+            message: `Failed to retrieve content from URL: ${error.message}. Check URL validity or manifest permissions.`,
+            claim: claim
+        };
+    }
+
+    // 2. Prepare Prompt and Content for Gemini
+    // Prompt meminta komparasi dengan Grounding Search.
+    const prompt = CLOUD_PROMPT_URL_CONTEXT(claim, pageContent, finalUrl);
+
+    console.log(
+        "[Veritas URL Context] Sending fetched URL content and claim to Gemini Cloud (WITH Google Search Grounding)..."
+    );
+    
+    const contents = [{ role: "user", parts: [{ text: prompt }] }];
+    
+    // MORTA FIX: Memanggil executeGeminiCall yang mengaktifkan Google Search Tool secara default.
+    const result = await executeGeminiCall(claim, contents);
+
+    // Sekarang, kita harus memastikan URL manual yang diinput juga muncul sebagai link, 
+    // terlepas dari hasil Grounding Search. executeGeminiCall sudah mengurus Grounding links,
+    // jadi kita tambahkan URL manual sebagai link tambahan di bagian Link.
+    
+    if (result.flag !== 'Error') {
+         // Tambahkan URL manual sebagai link terakhir di bagian Link (Markdown Link valid)
+         const manualLink = `- [Contextual Source: ${finalUrl}](${finalUrl})`;
+         
+         let newMessage = result.message.replace('Link:', `Link:\n${manualLink}`);
+         
+         // Jika Link: tidak ada (karena AI tidak memberikan Grounding), kita tambahkan Link: + Manual Link
+         if (!newMessage.includes('Link:')) {
+             newMessage += `\nLink:\n${manualLink}`;
+         }
+
+         result.message = newMessage;
+         saveFactCheckToHistory(result); // Simpan hasil yang sudah diperbarui
+    }
+    
+    return result;
+}
+
+// ====================================================================
 // FUNCTION 6: URL TO BASE64 UTILITY (For Multimodal URL)
 // Fetches an image URL and converts it to a Base64 string for API calls.
 // ====================================================================
@@ -785,13 +880,13 @@ async function testGeminiKeyLogic(apiKey) {
     try {
         const response = await fetch(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": apiKey
-            },
-            body: JSON.stringify(payload)
-        });
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": apiKey
+                },
+                body: JSON.stringify(payload)
+            });
 
         const data = await response.json();
 
@@ -818,8 +913,8 @@ async function testGeminiKeyLogic(apiKey) {
 // Core logic for processing URL content and sending it to Gemini.
 // ====================================================================
 async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
-    // Note: Caching is often skipped for URL Context checks due to dynamic content, 
-    // but we can check based on the URL and Claim hash if needed. For now, skip cache.
+    // Note: This function is now ONLY for handling content scraped from the ACTIVE tab, 
+    // potentially triggered by a future Context Menu feature or other automated process.
     
     const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
     const geminiApiKey = resultStorage.geminiApiKey;
@@ -839,13 +934,10 @@ async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
         "[Veritas URL Context] Sending URL page content and claim to Gemini Cloud (WITHOUT Google Search to ensure contextual accuracy)..."
     );
     
-    // We modify the core Gemini call to explicitly NOT use Google Search here, 
+    // Modified the core Gemini call to explicitly NOT use Google Search here, 
     // to force it to use the provided page context only.
     
     const contents = [{ role: "user", parts: [{ text: prompt }] }];
-    
-    // This is a custom call that doesn't use executeGeminiCall to disable the Google Search tool.
-    
     const payload = {
         contents: contents,
         // tools: [{ googleSearch: {} }] // COMMENTED OUT: We explicitly DON'T want grounding here.
@@ -854,13 +946,13 @@ async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
     try {
         const response = await fetch(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": geminiApiKey
-            },
-            body: JSON.stringify(payload)
-        });
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": geminiApiKey
+                },
+                body: JSON.stringify(payload)
+            });
         
         // This simplified result parsing reuses logic from executeGeminiCall for consistency.
         const data = await response.json();
@@ -887,10 +979,10 @@ async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
             const formattedMessage = `
 **"${claim}"**
 Reason:
-${rawReasoning}
+${rawReasoning} 
 Link:
-- [Context based on URL: ${pageUrl}]
-            `.trim();
+- [Contextual Source: ${pageUrl}](${pageUrl})
+            `.trim(); 
 
             const finalResult = {
                 flag: flag,

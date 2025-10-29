@@ -1,14 +1,13 @@
 <div class="dynamic-input-form">
-    <div id="backButtonContainer" style="text-align: left; margin-bottom: 10px;;">
+    <div id="backButtonContainer" style="text-align: left; margin-bottom: 15px;">
         <button id="backToHubButton" class="back-to-hub-btn" style="width: auto; padding: 5px 10px; background: var(--primary); color: white; margin-bottom: 0; font-size: 15px; font-family: ParaRegular; letter-spacing: 1px;">&larr; Back to Menu</button>
     </div>
-    <h4 style="color: var(--primary); font-size: 20px; margin-bottom: 10px; letter-spacing: 1px;">Fact Check URL + Claim:</h4>
-    
-    <p style="font-size: 15px; color: #807f92; margin-bottom: 10px;">(Veritas will analyze the current active tab content.)</p>
-    
-    <textarea id="urlClaimInput" placeholder="Enter the claim you want to verify based on the current page content..."></textarea>
-    
-    <button id="submitUrlButton">Analyze Page & Verify Claim</button>
-    
+    <h4 style="color: var(--primary); font-size: 20px; margin-bottom: 5px; letter-spacing: 1px;">Fact Check URL + Claim:</h4>
+    <p style="font-size: 15px; color: #000000; margin-bottom: 10px; font-weight: 400; letter-spacing: 1px; font-family: sans-serif;">Please provide copy of an information via URLs.</p>
+    <p style="color: #000000; font-size: 15px; margin-top: 5px; font-weight: 400; letter-spacing: 1px; font-family: sans-serif;">You can start by paste any kind of URL address from the internet that you're curious about.</p>
+    <textarea id="urlAddressInput" placeholder="Drop URL address link here! (e.g., https://example.com/article)"></textarea>
+    <p style="font-size: 15px; color: #000000; font-weight: 400; letter-spacing: 1px; font-family: sans-serif; ">Describe the context or any information within the URLs that you want to know:</p>
+    <textarea id="urlClaimInput" placeholder="What part of this website that you want to know?"></textarea>
+    <button id="submitUrlButton">Verify</button>
     <div id="urlStatus" style="font-size: 15px; margin-top: 5px;"></div>
 </div>
