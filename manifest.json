@@ -43,18 +43,17 @@
     }]
   },
   "web_accessible_resources": [
-    {
-      "resources": [
-        "icons/*.png",
-        "icons/*.svg",
-        "icons/*.mp4",
-        "fonts/ParaRegular.ttf",
-        "fonts/Sublima-ExtraLight.otf",
-        "fonts/Sublima-ExtraLightItalic.otf",
-        "fonts/Sublima-ExtraBold.otf",
-        "fonts/Sublima-ExtraBoldItalic.otf"
-      ],
-      "matches": ["<all_urls>"]
-    }
+  {
+    "resources": [
+      "icons/*.png",
+      "icons/*.svg",
+      "icons/*.mp4",
+      "fonts/ParaRegular.ttf",
+      "text_check.html",
+      "image_check.html",
+      "url_check.html"
+    ],
+    "matches": ["<all_urls>"]
+  }
   ]
 }

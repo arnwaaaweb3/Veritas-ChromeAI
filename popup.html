@@ -5,8 +5,6 @@
     <meta charset="UTF-8">
     <title>Veritas AI</title>
     <style>
-        /* ... (CSS tidak ada perubahan, kecuali penambahan #resultOutput button#newCheckButton) ... */
-
         :root {
             --primary: #4285F4;
             --secondary: #34A853;
@@ -88,7 +86,7 @@
             width: 72px;
             height: 72px;
             z-index: 10;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
             border-radius: 16px;
             margin-bottom: 15px;
             animation: logoFade 5s ease-in-out forwards;
@@ -131,7 +129,6 @@
 
         .circleBox {
             width: 3rem;
-            /* ukuran lingkaran */
             height: 3rem;
             border-radius: 50%;
             background: #ffffff;
@@ -164,8 +161,7 @@
             inset: 0;
             display: flex;
             flex-direction: column;
-            /* MORTA FIX: Padding 40px di bawah untuk breathing space */
-            padding: 16px 16px 40px 16px; 
+            padding: 16px 16px 40px 16px;
             opacity: 0;
             transform: translateY(10px);
             transition: opacity 0.8s ease, transform 0.8s ease;
@@ -191,7 +187,6 @@
             border-radius: var(--radius);
             font-weight: 800;
             font-size: 20px;
-            /* Default size (akan di-override per kelas) */
             font-family: 'ParaRegular';
             display: flex;
             align-items: center;
@@ -205,12 +200,10 @@
             border: 1.5px solid #1800ad;
         }
 
-        /* MORTA FIX: Style untuk inner text yang akan di fade */
+        /* Fading Text Inner-style */
         #headerTextContent {
             transition: opacity 0.2s ease;
-            /* Hanya teks yang kena transisi opacity */
             opacity: 1;
-            /* Penting: Pastikan inner element bisa di-center di dalam parent flex */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -226,7 +219,6 @@
         #resultHeader.Hijau {
             color: #fff;
             font-weight: 800;
-            box-shadow: 0 5px 10px rgba(52, 168, 83, 0.4);
             background: linear-gradient(270deg, #34A853, #7ee071, #34A853);
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
@@ -239,7 +231,6 @@
         #resultHeader.Merah {
             color: #fff;
             background-color: var(--danger);
-            box-shadow: 0 5px 10px rgba(234, 67, 53, 0.4);
             background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
@@ -251,7 +242,6 @@
         /* 3. KUNING (Warning / Caution) */
         #resultHeader.Kuning {
             color: var(--text);
-            box-shadow: 0 5px 10px rgba(251, 188, 5, 0.3);
             background: linear-gradient(270deg, #ffb300, #ff8c00, #ffd54f, #ffb300);
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
@@ -264,7 +254,6 @@
         #resultHeader.Error {
             color: #fff;
             background-color: var(--danger);
-            box-shadow: 0 5px 10px rgba(234, 67, 53, 0.4);
             background: linear-gradient(270deg, #d32f2f, #8b0000, #d32f2f);
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
@@ -277,7 +266,6 @@
         #resultHeader.Default {
             color: var(--neutral);
             font-size: 15px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             background: linear-gradient(270deg, #1800ad, #7b68ee, var(--primary));
             background-size: 400% 400%;
             animation: gradientMove 20s ease infinite;
@@ -285,7 +273,7 @@
             letter-spacing: 0.05rem;
         }
 
-        /* Animasi gerak kanan-kiri */
+        /* Animation left and right */
         @keyframes gradientMove {
             0% {
                 background-position: 0% 50%;
@@ -300,12 +288,12 @@
             }
         }
 
-        /* Ikon/Symbol: Dihapus total */
+        /* Deletes flag symbol */
         .flag-symbol {
             display: none;
         }
 
-        /* MORTA FIX: New Check Button Style on Result Page */
+        /* Check Button Style on Result Page */
         #resultOutput button#newCheckButton {
             background: var(--primary) !important;
             color: white !important;
@@ -316,11 +304,21 @@
             text-align: right;
             font-size: 15px;
         }
-        
+
+        #resultOutput button#newCheckButton:hover {
+            background: #1800ad !important;
+            transform: translateY(-0.5px);
+            box-shadow: rgb(182, 182, 182) 0px 3px 12px;
+        }
+
+        #resultOutput button#newCheckButton {
+            transition: all 0.2s ease;
+        }
+
         #resultOutput #resultActions {
-            overflow: hidden; /* Clear float */
-            margin-top: 10px; /* Jarak dari linkBox */
-            margin-bottom: 5px; /* Jarak ke bawah */
+            overflow: hidden;
+            margin-top: 10px;
+            margin-bottom: 5px;
         }
 
         #claimDisplay {
@@ -352,7 +350,7 @@
             margin: 0;
             font-weight: 500px;
             font-size: 20px;
-            color: var(--primary);
+            color: #1800ad;
             letter-spacing: 1px;
         }
 
@@ -361,7 +359,7 @@
             padding: 0;
             margin-top: 5px;
             font-family: sans-serif;
-            color: #1800ad;
+            color: #000000;
             font-style: italic;
             letter-spacing: 0.5px;
         }
@@ -386,7 +384,6 @@
             padding: 12px;
             background-color: #ffffff;
             border-radius: var(--radius);
-            border: 1px solid #ddd;
             font-size: 15px;
             position: relative;
         }
@@ -395,7 +392,7 @@
             margin: 0;
             font-weight: 500px;
             font-size: 20px;
-            color: var(--primary);
+            color: #1800ad;
             letter-spacing: 1px;
         }
 
@@ -416,6 +413,12 @@
 
         #linkBox a {
             word-break: break-all;
+            color: #000000;
+        }
+
+        #linkBox a:hover {
+            color:#1800ad;
+            text-decoration: underline;
         }
 
         #linkToggleButton {
@@ -430,10 +433,8 @@
             display: block;
             width: 100%;
             text-align: right;
-            /* Taruh di pojok kanan */
             transition: color 0.15s ease;
             text-decoration: underline;
-            /* Kasih underline biar jelas itu bisa diklik */
         }
 
         #linkToggleButton:hover {
@@ -485,42 +486,49 @@
         /* =================================================== */
 
         .dynamic-input-form {
-            margin-top: 18px;
-            /* Disesuaikan agar tombol menempel di padding bawah maincontent */
+            margin-top: 0px;
             padding: 12px 12px 0 12px;
-            background: rgba(240, 240, 255, 0.9);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: var(--radius);
         }
 
         .dynamic-input-form textarea {
+            /* Style untuk semua textarea (sudah benar, termasuk #textClaimInputOnly) */
             width: 100%;
             height: 70px;
             resize: none;
             padding: 8px;
             font-family: inherit;
             border: 1px solid #ddd;
+            /* Style generik untuk textarea */
             border-radius: var(--radius);
             box-sizing: border-box;
             margin-bottom: 8px;
         }
 
-        /* Semua tombol di dalam dynamic-input-form */
-        .dynamic-input-form button {
+        /* [MORTA FIX] HANYA menargetkan tombol yang merupakan ANAK LANGSUNG dari .dynamic-input-form
+   (Yaitu tombol Verify/Submit/Analyze) */
+        .dynamic-input-form>button {
             background: var(--primary);
             color: #fff;
             width: 100%;
             padding: 10px;
-            /* Margin bawah untuk memisahkan dari bottom padding mainContent */
             margin-bottom: 12px;
             border: none;
             font-weight: 600;
+            font-size: 15px;
+            font-family: "ParaRegular";
+            letter-spacing: 1.5px;
             border-radius: var(--radius);
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        .dynamic-input-form button:hover {
-            background: #3367d6;
+        /* Hover State untuk Verify/Submit/Analyze Button */
+        .dynamic-input-form>button:hover {
+            background: #1800ad !important;
+            transform: translateY(-1px);
+            box-shadow: rgb(182, 182, 182) 0px 3px 12px;
         }
 
 
@@ -573,7 +581,7 @@
             border-radius: var(--radius);
             border-left: 4px solid #aaa;
             background: #fcfcfc;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
             cursor: pointer;
             transition: background 0.2s;
         }
@@ -674,6 +682,31 @@
             position: relative;
         }
 
+        /* --- BACK TO MENU BUTTON --- */
+        /* Target ID untuk Override Default Style */
+        #backButtonContainer #backToHubButton {
+            /* Gunakan background default yang lebih 'Veritas' */
+            background: var(--primary) !important;
+            color: white !important;
+            /* Tambahkan transisi biar smooth */
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        /* Hover State */
+        #backButtonContainer #backToHubButton:hover {
+            background: #1800ad !important;
+            transform: translateY(-1px);
+            box-shadow: rgb(182, 182, 182) 0px 1px 4px;
+        }
+
+        /* Disable State (Optional tapi Penting) */
+        #backButtonContainer #backToHubButton:disabled {
+            background: #aaa !important;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         /* ------------------------------------------------------------------ */
         /* FIX LOGIC: Mengatasi tombol 'hilang' saat unactive (default) */
         /* ------------------------------------------------------------------ */
@@ -731,7 +764,7 @@
             transition: background-image 0.2s ease, transform 0.15s ease;
         }
 
-        /* Hover State - Gambar akan diganti oleh JS */
+        /* Hover State*/
         .nav-button:hover {
             transform: scale(1.02);
             /* Efek zoom tipis */
@@ -766,6 +799,33 @@
             border: none;
             box-shadow: rgb(182, 182, 182) 0px 1px 4px;
         }
+
+        /* Tambahkan atau perbarui blok ini di <style> di popup.html kamu */
+        #textClaimInputOnly {
+            letter-spacing: 1px;
+            font-size: 15px;
+            font-style: italic;
+            background-color: #ffffff;
+            width: 100%;
+            color: #807f92;
+            height: 70px;
+            resize: vertical;
+            padding: 10px;
+            font-family: inherit;
+            border-radius: var(--radius);
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            border: 2.5px solid #807f92;
+            transition: all 0.2s ease;
+        }
+
+        /* 3. Mode 2: Border saat fokus (Kursor '|' muncul) */
+        #textClaimInputOnly:focus {
+            outline: none;
+            color: #1800ad;
+            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
+            border: 2.5px solid #1800ad;
+        }
     </style>
 </head>
 
@@ -796,7 +856,7 @@
 
             <div id="tabContent">
                 <div id="factCheckTab">
-                    
+
                     <div id="navigationHub" style="display:none; padding-top: 2.5px;">
                         <div class="welcomeText">
                             <button id="closeWelcome"
@@ -806,17 +866,22 @@
                             <p style="color: #807f92; font-size: 15px;">We're here to help verifying information in
                                 order to make your browsing experience safe and secure!</p>
                         </div>
-                        
+
                         <div style="text-align: center; margin-top: 25px;">
-                            <h4 style="font-size: 15px; color: var(--primary); letter-spacing: 1px;">To get started, select the option down below:</h4>
-                            <div id="navButtonsContainer" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
-                                <button id="btnText" class="nav-button" data-icon="txtIcon.png" data-hover-icon="txtHover.png" data-target-view="textCheck">
+                            <h4 style="font-size: 15px; color: var(--primary); letter-spacing: 1px;">To get started,
+                                select the option down below:</h4>
+                            <div id="navButtonsContainer"
+                                style="display: flex; flex-direction: column; gap: 10px; margin-top: 25px;">
+                                <button id="btnText" class="nav-button" data-icon="txtIcon.png"
+                                    data-hover-icon="txtHover.png" data-target-view="textCheck">
                                     Text
                                 </button>
-                                <button id="btnImage" class="nav-button" data-icon="imgIcon.png" data-hover-icon="imgHover.png" data-target-view="imageCheck">
+                                <button id="btnImage" class="nav-button" data-icon="imgIcon.png"
+                                    data-hover-icon="imgHover.png" data-target-view="imageCheck">
                                     Image
                                 </button>
-                                <button id="btnURL" class="nav-button" data-icon="urlIcon.png" data-hover-icon="urlHover.png" data-target-view="urlCheck">
+                                <button id="btnURL" class="nav-button" data-icon="urlIcon.png"
+                                    data-hover-icon="urlHover.png" data-target-view="urlCheck">
                                     URL
                                 </button>
                             </div>
@@ -830,18 +895,18 @@
                     </div>
 
                     <div id="resultOutput" style="display:none;">
-                        
+
                         <div id="claimDisplay"></div>
                         <div id="reasoningBox"></div>
                         <div id="linkBox"></div>
-                        
+
                         <div id="resultActions">
-                            <button id="newCheckButton" style="display: none;">&#8592; Start New Check</button>
+                            <button id="newCheckButton">&#8592; Start New Check</button>
                         </div>
-                        </div>
-                    
+                    </div>
+
                     <div id="dynamicContent" style="display:none;">
-                        </div>
+                    </div>
                 </div>
 
                 <div id="historyTab" style="display:none; padding-top: 10px;">
@@ -855,4 +920,5 @@
 
     <script src="popup.js"></script>
 </body>
+
 </html>

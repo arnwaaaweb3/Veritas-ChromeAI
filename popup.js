@@ -42,19 +42,20 @@ function showView(viewName) {
     
     // Container dinamis untuk input
     const dynamicContent = document.getElementById('dynamicContent');
-    dynamicContent.style.display = 'none';
+    // dynamicContent.style.display = 'none'; // Dihapus, akan diurus oleh loadAndSetupView
     dynamicContent.innerHTML = ''; // Hapus konten lama (bersih-bersih)
 
     // 2. Tentukan view mana yang akan ditampilkan
     if (viewName === 'textCheck') {
-        document.getElementById('resultOutput').style.display = 'block';
+        // Form input muncul di dynamicContent, resultHeader tetap terlihat
+        document.getElementById('resultOutput').style.display = 'block'; 
         loadAndSetupView('text_check', setupTextCheckListener);
     } else if (viewName === 'imageCheck') {
         document.getElementById('resultOutput').style.display = 'block'; 
         loadAndSetupView('image_check', setupUploadListener);
     } else if (viewName === 'urlCheck') {
         document.getElementById('resultOutput').style.display = 'block'; 
-        loadAndSetupView('url_check'); // URL check has no unique listener (yet)
+        loadAndSetupView('url_check', setupUrlCheckListener); // Panggil setupUrlCheckListener
     } else {
         // Default (kembali ke hub)
         document.getElementById('navigationHub').style.display = 'block';
@@ -65,37 +66,35 @@ function showView(viewName) {
 // Function baru untuk memuat HTML secara dinamis dan memasang listener
 async function loadAndSetupView(viewFileName, setupFunction = null) {
     const dynamicContent = document.getElementById('dynamicContent');
+    
     try {
-        // MORTA: Pastikan file diakses sebagai resource ekstensi
         const response = await fetch(chrome.runtime.getURL(viewFileName + '.html'));
         if (!response.ok) {
-            throw new Error(`File ${viewFileName}.html not found or access denied.`);
+            // Ini akan menangkap kegagalan fetch yang (walaupun manifest sudah benar) bisa terjadi karena error lain
+            throw new Error(`File ${viewFileName}.html not found or access denied. Check console for fetch errors.`);
         }
         const html = await response.text();
         
         dynamicContent.innerHTML = html;
-        dynamicContent.style.display = 'block';
+        // FIX KRITIS: Pastikan display block disetel setelah content dimasukkan
+        dynamicContent.style.display = 'block'; 
 
-        // Panggil setup listener spesifik (e.g., submit button)
+        // Pasang listener setelah elemen DOM dimuat
         if (setupFunction) {
             setupFunction();
         }
         
-        // MORTA FIX: PASANG LISTENER TOMBOL BACK SETELAH KONTEN DIMUAT
         setupBackButtonListener();
-        
-        // Kita panggil getFactCheckResult(true) hanya untuk reset header, 
-        // BUKAN untuk menampilkan Hub lagi.
         getFactCheckResult(true); 
 
     } catch (error) {
         console.error("Morta Error: Gagal memuat view", viewFileName, error);
-        dynamicContent.innerHTML = `<div class="dynamic-input-form" style="padding: 12px; margin-top: 18px; background: rgba(255, 230, 230, 0.9); border-radius: var(--radius); text-align: center;"><p style="color:red; font-weight:bold;">Morta Error: Failed to load input form. Make sure you created the file: ${viewFileName}.html</p></div>`;
-        dynamicContent.style.display = 'block';
+        dynamicContent.innerHTML = `<div class="dynamic-input-form" style="padding: 12px; margin-top: 18px; background: rgba(255, 230, 230, 0.9); border-radius: var(--radius); text-align: center;"><p style="color:red; font-weight:bold;">Morta Error: Failed to load input form. Cek console!</p></div>`;
+        dynamicContent.style.display = 'block'; // Pastikan error message terlihat
     }
 }
 
-// Function untuk memasang listener ke 3 tombol baru
+// Function untuk memasang listener ke 3 tombol baru di Navigation Hub
 function setupNavigationHub() {
     const navButtonsContainer = document.getElementById('navButtonsContainer');
     if (!navButtonsContainer) return;
@@ -105,10 +104,8 @@ function setupNavigationHub() {
         const hoverIcon = button.getAttribute('data-hover-icon');
         const targetView = button.getAttribute('data-target-view');
         
-        // Atur icon default (penting karena CSS hanya fallback)
         button.style.backgroundImage = `url('icons/${defaultIcon}')`;
 
-        // Logic Hover (ganti gambar)
         button.onmouseover = () => {
             button.style.backgroundImage = `url('icons/${hoverIcon}')`;
         };
@@ -116,7 +113,6 @@ function setupNavigationHub() {
             button.style.backgroundImage = `url('icons/${defaultIcon}')`;
         };
 
-        // Logic Click (ganti view)
         button.onclick = () => {
             showView(targetView);
         };
@@ -366,7 +362,6 @@ function getFactCheckResult(forceDefault = false) {
     
     // Sembunyikan semua kontainer fungsionalitas
     document.getElementById('resultOutput').style.display = 'none';
-    document.getElementById('dynamicContent').style.display = 'none';
 
     // MORTA FIX: Sembunyikan New Check Button
     const newCheckButton = document.getElementById('newCheckButton');
@@ -392,9 +387,6 @@ function getFactCheckResult(forceDefault = false) {
         // Default state if no result OR if forceDefault is true
         document.getElementById('loadingState').style.display = 'none';
         
-        // MORTA FIX: HANYA tampilkan Navigation Hub jika INI ADALAH INISIALISASI
-        // (result kosong, forceDefault=false). Jika forceDefault=true (dari sub-view),
-        // kita hanya reset header.
         if (!result && !forceDefault) {
              document.getElementById('navigationHub').style.display = 'block';
         }
