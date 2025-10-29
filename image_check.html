@@ -1,10 +1,14 @@
 <div class="dynamic-input-form">
-    <div id="backButtonContainer" style="text-align: left; margin-bottom: 10px;">
-        <button id="backToHubButton" style="width: auto; padding: 5px 10px; background: #666; color: white; margin-bottom: 0;">&larr; Back to Menu</button>
+    <div id="backButtonContainer" style="text-align: left; margin-bottom: 10px;;">
+        <button id="backToHubButton" class="back-to-hub-btn" style="width: auto; padding: 5px 10px; background: var(--primary); color: white; margin-bottom: 0; font-size: 15px; font-family: ParaRegular; letter-spacing: 1px;">&larr; Back to Menu</button>
     </div>
-    <h4 style="color: var(--primary); font-size: 18px;">Fact Check Image + Context:</h4>
+    <h4 style="color: var(--primary); font-size: 20px; margin-bottom: 10px; letter-spacing: 1px;">Fact Check Image + Context:</h4>
+    
     <textarea id="textClaimInput" placeholder="Enter claim related to the image... (Contextual Text)"></textarea>
+    
     <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" />
-    <button id="submitUploadButton">Analyze Image</button>
-    <div id="uploadStatus"></div>
+    
+    <button id="submitUploadButton">Verify</button>
+    
+    <div id="uploadStatus" style="font-size: 15px; margin-top: 5px;"></div>
 </div>
