@@ -1,4 +1,4 @@
-// background.js (CLEAN V12: URL Context Activation)
+// background.js
 
 import {
     CLOUD_PROMPT_TEXT_ONLY,
@@ -11,7 +11,7 @@ import {
     CLOUD_PROMPT_URL_CONTEXT 
 } from './prompt.js';
 
-// --- LOCAL AI HELPER FUNCTIONS (START) ---
+// LOCAL AI CHECKER UTILITIES
 // Checks if Chrome's built-in AI API is available on the user's device.
 function isLocalAiAvailable() {
     return (typeof chrome !== 'undefined' && typeof chrome.ai !== 'undefined');
@@ -62,7 +62,6 @@ async function runLocalPreProcessing(claimText) {
         return claimText;
     }
 }
-// --- LOCAL AI HELPER FUNCTIONS (END) ---
 
 // --- HISTORY LOGIC (START) ---
 const HISTORY_KEY = 'veritasHistory';
@@ -112,7 +111,7 @@ async function saveFactCheckToHistory(result) {
 // --- HISTORY LOGIC (END) ---
 
 
-// FUNCTION 1: SENDING RESULT TO POPUP
+// SENDING RESULT TO POPUP
 // Stores the result and opens the extension popup
 function sendResultToPopup(result, isContextual = false) {
     chrome.storage.local.set({
@@ -123,7 +122,9 @@ function sendResultToPopup(result, isContextual = false) {
     });
 }
 
+// =====================================================================
 // Sends a standard Chrome notification upon completion/failure
+// =====================================================================
 function sendFactCheckNotification(claimText, isSuccess) {
     const notificationId = 'veritas-fact-check-' + Date.now();
 
@@ -138,29 +139,25 @@ function sendFactCheckNotification(claimText, isSuccess) {
     });
 }
 
-// NEW LISTENER: Clickable Notification
+// Clickable Notification
 // Listens for clicks on the notification to open the popup
 chrome.notifications.onClicked.addListener((notificationId) => {
-    // Open extension popup when notification is clicked
     chrome.action.openPopup();
-    // Optional: Clear notification after clicking
     chrome.notifications.clear(notificationId);
 });
 
 // ====================================================================
 // FUNCTION 2: CONTEXT MENU SETUP
 // ====================================================================
-
 // Creates context menus when the extension is installed
 chrome.runtime.onInstalled.addListener(() => {
-    // Menu 1: Fact Check Text (Selection)
     chrome.contextMenus.create({
         id: "veritasFactCheckText",
         title: "Veritas: Fact Check Text Claim",
         contexts: ["selection"]
     });
 
-    // Menu 2: Fact Check Multimodal (Image)
+    // Fact Check Multimodal (Image)
     chrome.contextMenus.create({
         id: "veritasFactCheckMultimodal",
         title: "Veritas: Fact Check Claim + Image (Multimodal)",
@@ -173,12 +170,10 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // ====================================================================
-// FUNCTION 3: MAIN CONTEXT MENU LISTENER (Right-Click) (PATCH: Retry Logic)
+// MAIN CONTEXT MENU LISTENER (Right-Click) (PATCH: Retry Logic)
 // ====================================================================
-
 // Main listener for context menu clicks (right-click)
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-
     const selectedText = info.selectionText;
     const currentTabId = tab.id;
 
@@ -228,16 +223,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             'isContextualCheck': true
         });
 
-
         let result = null;
 
         if (isTextMode) {
-            // Run API Call (Async)
             result = await runFactCheckHybrid(selectedText);
         } else {
-            // Run Multimodal API Call 
             const imageUrl = info.srcUrl;
-            // The selected text is ignored here. We use a placeholder string.
             const text = "USER_MUST_PROVIDE_CLAIM"; 
             result = await runFactCheckMultimodalUrl(imageUrl, text);
         }
@@ -257,20 +248,20 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 // ====================================================================
-// FUNCTION 4, 9, etc. CONSOLIDATED: LISTENER FOR POPUP/UPLOAD/SETTINGS
+// LISTENER FOR POPUP/UPLOAD/SETTINGS
 // Consolidated all messaging from popup.js and settings.js into one listener.
 // ====================================================================
 
 chrome.runtime.onMessage.addListener(
     (request, sender, sendResponse) => {
 
-        // --- 1. POPUP: TEXT ONLY FACT CHECK (ACTIVATED) ---
+        // --- POPUP: TEXT ONLY FACT CHECK (ACTIVATED) ---
         if (request.action === 'textOnlyFactCheck') {
             const claim = request.claim;
 
             console.log("[Veritas Popup] Received Text-Only claim for processing.");
 
-            // 1. Set Loading state in storage (for popup display)
+            // Set Loading state in storage (for popup display)
             const loadingResult = {
                 flag: 'loading',
                 claim: claim,
@@ -278,9 +269,9 @@ chrome.runtime.onMessage.addListener(
             };
             chrome.storage.local.set({ 'lastFactCheckResult': loadingResult });
 
-            // 2. Run the existing Hybrid Fact Check Logic (Function 5)
+            // Run the existing Hybrid Fact Check Logic (Function 5)
             runFactCheckHybrid(claim).then(result => {
-                // 3. Update result and notify popup
+                // Update result and notify popup
                 sendFactCheckNotification(claim, result.flag !== 'Error');
                 chrome.storage.local.set({ 'lastFactCheckResult': result });
 
@@ -302,7 +293,7 @@ chrome.runtime.onMessage.addListener(
             return true; // Indicates an asynchronous response
         }
 
-        // --- 2. POPUP: MULTIMODAL UPLOAD (Existing) ---
+        // --- POPUP: MULTIMODAL UPLOAD (Existing) ---
         if (request.action === 'multimodalUpload') {
             const { base64, mimeType, claim } = request;
 
@@ -332,13 +323,13 @@ chrome.runtime.onMessage.addListener(
             return true; // Indicates an asynchronous response
         }
         
-        // --- MORTA FIX: 3. POPUP: URL FACT CHECK WITH MANUAL URL & CLAIM ---
+        // --- POPUP: URL FACT CHECK WITH MANUAL URL & CLAIM ---
         if (request.action === 'urlFactCheckWithClaim') {
             const { url, claim } = request;
 
             console.log("[Veritas Popup] Received URL & Claim for processing.");
 
-            // 1. Set Loading state in storage (for popup display)
+            // Set Loading state in storage (for popup display)
             const loadingResult = {
                 flag: 'loading',
                 claim: claim,
@@ -346,9 +337,9 @@ chrome.runtime.onMessage.addListener(
             };
             chrome.storage.local.set({ 'lastFactCheckResult': loadingResult });
 
-            // 2. Run the new Manual URL Fact Check Logic
+            // Run the new Manual URL Fact Check Logic
             runFactCheckUrlManual(url, claim).then(result => {
-                // 3. Update result and notify popup
+                // Update result and notify popup
                 sendFactCheckNotification(claim, result.flag !== 'Error');
                 chrome.storage.local.set({ 'lastFactCheckResult': result });
 
@@ -370,14 +361,7 @@ chrome.runtime.onMessage.addListener(
             return true; // Indicates an asynchronous response
         }
         
-        // --- MORTA FIX: REMOVED OLD 'urlContentScraped' LISTENER ---
-        /*
-        if (request.action === 'urlContentScraped') {
-            // ... (Logic removed as we are now doing content fetching in the background)
-        }
-        */
-
-        // --- 4. SETTINGS: TEST API KEY (Existing) ---
+        // --- SETTINGS: TEST API KEY (Existing) ---
         if (request.action === 'testGeminiKey') {
             const apiKeyToTest = request.apiKey;
 
@@ -395,21 +379,26 @@ chrome.runtime.onMessage.addListener(
 // Handles communication with the Gemini Cloud API, including tool use (Google Search) and parsing.
 // ====================================================================
 async function executeGeminiCall(claim, contents) {
-    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    const geminiApiKey = resultStorage.geminiApiKey;
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    let geminiApiKey = resultStorage.geminiApiKey;
 
     if (!geminiApiKey) {
-        return {
-            flag: "Error",
-            message: "Gemini API Key is not set. Cloud access blocked.",
-            debug: "Missing API Key"
-        };
+        console.warn("[Veritas API Fallback] No API Key found. Using Demo Key for testing purposes.");
+        // Hardcoded API Key for DEMO purposes
+        geminiApiKey = "AIzaSyA4aSZOWaoxSnTbmjCm_rLxX-YBF-ZxlOU";
     }
-
-    const payload = {
-        contents: contents,
-        tools: [{ googleSearch: {} }] // Enable Google Search Grounding
-    };
+    
+    if (!geminiApiKey) {
+        return {
+            flag: "Error",
+            message: "Gemini API Key is not set. Cloud access blocked. Set key in Settings.",
+            debug: "Missing API Key"
+        };
+    }
+    const payload = {
+        contents: contents,
+        tools: [{ googleSearch: {} }] 
+    };
 
     try {
         const response = await fetch(
@@ -443,14 +432,10 @@ async function executeGeminiCall(claim, contents) {
                 }
             }
 
-            // --- NEW FORMATTING LOGIC START ---
-
             // Strip the leading FLAG= prefix
             const reasonStart = aiResponse.replace(/^(FACT|MISINFORMATION|CAUTION)\s*(=)?\s*/i, '').trim();
-            // Assuming the reasoning text follows the flag prefix
             const parts = reasonStart.split('Reason:');
             const rawReasoning = (parts.length > 1) ? parts.slice(1).join('=').trim() : reasonStart;
-
 
             // Link Grounding Logic (Extraction from GroundingMetadata)
             const groundingMetadata = data.candidates[0].groundingMetadata;
@@ -526,96 +511,106 @@ ${linksOutput}
 }
 
 // ====================================================================
-// FUNCTION 5: RUN FACT CHECK HYBRID (TEXT ONLY) 
+// RUN FACT CHECK HYBRID (TEXT ONLY) 
 // Handles the hybrid flow: Cache check -> Local AI Fallback/Pre-processing -> Cloud API call
 // ====================================================================
-
 async function runFactCheckHybrid(text) {
 
-    // --- 1. CHECK CACHE ---
-    const cachedResult = getFromCache(text);
-    if (cachedResult) {
-        console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
-        return cachedResult;
+    // --- CHECK CACHE ---
+    const cachedResult = getFromCache(text);
+    if (cachedResult) {
+        console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
+        return cachedResult;
+    }
+
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    let geminiApiKey = resultStorage.geminiApiKey;
+
+    const DEMO_API_KEY = "AIzaSyA4aSZOWaoxSnTbmjCm_rLxX-YBF-ZxlOU"; 
+    
+    if (!geminiApiKey) { 
+        console.warn("[Veritas Hybrid Fallback] Key missing in storage. Using Hardcoded DEMO Key.");
+        geminiApiKey = DEMO_API_KEY; // Inject kunci demo
     }
 
-    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    const geminiApiKey = resultStorage.geminiApiKey;
-
-    // --- 2. HANDLE NO API KEY / FALLBACK TO LOCAL AI (Unique Logic) ---
-    if (!geminiApiKey) {
-        if (isLocalAiAvailable()) {
-            console.log(
-                "[Veritas Hybrid] Missing API Key. Performing verification using Local AI (On-Device)."
-            );
-
-            // Use imported prompt for local fallback
-            const localPrompt = LOCAL_PROMPT_TEXT_FALLBACK(text);
-
-            const localResult = await chrome.ai.generateContent({
-                model: 'gemini-flash',
-                prompt: localPrompt,
-                config: { maxOutputTokens: 60 }, // Max token strictly reduced
-            });
-
-            const aiResponse = localResult.text.trim();
-            const upperResponse = aiResponse.toUpperCase();
-            let flag = "Kuning";
-            if (upperResponse.startsWith("FACT")) { flag = "Hijau"; }
-            else if (upperResponse.startsWith("MISINFORMATION")) { flag = "Merah"; }
-            else if (upperResponse.startsWith("CAUTION")) { flag = "Kuning"; }
-
-            const finalResult = {
-                flag: flag,
-                message: aiResponse +
-                    "[THIS VERIFICATION IS BASED ONLY ON LOCAL/INTERNAL CHROME KNOWLEDGE. Please enter an API Key for Real-Time (Grounding) verification.]",
-                claim: text
-            };
-
-            // Set to Cache after successful local fallback
-            setToCache(text, finalResult);
-            saveFactCheckToHistory(finalResult);
-            return finalResult;
-        }
-
-        // If Local AI is also unavailable
-        return {
+    if (geminiApiKey === DEMO_API_KEY && geminiApiKey.includes("PASTE_NOW")) {
+         return {
             flag: "Error",
-            message: "Gemini API Key is not set. Open Veritas Settings (right-click extension icon > Options) and save your API Key. (Local AI currently unavailable on this device.)",
-            debug: "Missing API Key & Local AI Unavailable"
+            message: "Demo Key Placeholder Error: Please replace the hardcoded DEMO_API_KEY in background.js with your actual working key for the demo to run instantly.",
+            debug: "Missing API Key Placeholder"
         };
     }
 
-    // --- 3. IF API KEY IS PRESENT: Use pipeline Local Pre-processing + executeGeminiCall ---
 
-    // Run local pre-processing first (simplifies the text claim)
-    const processedText = await runLocalPreProcessing(text);
+    // --- HANDLE NO API KEY / FALLBACK TO LOCAL AI (Original Logic) ---
+    if (!geminiApiKey) { 
 
-    // Use imported cloud prompt
-    const prompt = CLOUD_PROMPT_TEXT_ONLY(processedText);
+        if (isLocalAiAvailable()) {
+            console.log(
+                "[Veritas Hybrid] Missing API Key. Performing verification using Local AI (On-Device)."
+            );
 
-    console.log(
-        "[Veritas Hybrid] Sending prompt to Gemini Cloud (with Google Search)..."
-    );
+            // Use imported prompt for local fallback
+            const localPrompt = LOCAL_PROMPT_TEXT_FALLBACK(text);
 
-    const contents = [{ role: "user", parts: [{ text: prompt }] }];
+            const localResult = await chrome.ai.generateContent({
+                model: 'gemini-flash',
+                prompt: localPrompt,
+                config: { maxOutputTokens: 60 }, 
+            });
 
-    const result = await executeGeminiCall(text, contents);
+            const aiResponse = localResult.text.trim();
+            const upperResponse = aiResponse.toUpperCase();
+            let flag = "Kuning";
+            if (upperResponse.startsWith("FACT")) { flag = "Hijau"; }
+            else if (upperResponse.startsWith("MISINFORMATION")) { flag = "Merah"; }
+            else if (upperResponse.startsWith("CAUTION")) { flag = "Kuning"; }
 
-    // Set to Cache after successful cloud call
-    if (result.flag !== 'Error') {
-        setToCache(text, result);
-    }
+            const finalResult = {
+                flag: flag,
+                message: aiResponse +
+                    "[THIS VERIFICATION IS BASED ONLY ON LOCAL/INTERNAL CHROME KNOWLEDGE. Please enter an API Key for Real-Time (Grounding) verification.]",
+                claim: text
+            };
 
-    return result;
+            // Set to Cache after successful local fallback
+            setToCache(text, finalResult);
+            saveFactCheckToHistory(finalResult);
+            return finalResult;
+        }
+
+        // If Local AI is also unavailable
+        return {
+            flag: "Error",
+            message: "Gemini API Key is not set. Open Veritas Settings (right-click extension icon > Options) and save your API Key. (Local AI currently unavailable on this device.)",
+            debug: "Missing API Key & Local AI Unavailable"
+        };
+    }
+
+    // Run local pre-processing first (simplifies the text claim)
+    const processedText = await runLocalPreProcessing(text);
+
+    // Use imported cloud prompt
+    const prompt = CLOUD_PROMPT_TEXT_ONLY(processedText);
+
+    console.log(
+        "[Veritas Hybrid] Sending prompt to Gemini Cloud (with Google Search)..."
+    );
+
+    const contents = [{ role: "user", parts: [{ text: prompt }] }];
+
+    const result = await executeGeminiCall(text, contents);
+
+    // Set to Cache after successful cloud call
+    if (result.flag !== 'Error') {
+        setToCache(text, result);
+    }
+
+    return result;
 }
 
 // ====================================================================
-// FUNCTION X: RUN FACT CHECK MANUAL URL (NEW FUNCTION)
-// Core logic for processing MANUALLY INPUTTED URL content and sending it to Gemini.
-// ====================================================================
-// ====================================================================
-// MORTA FIX: FUNCTION X: RUN FACT CHECK MANUAL URL (NOW WITH GROUNDING)
+// RUN FACT CHECK MANUAL URL (NOW WITH GROUNDING)
 // ====================================================================
 async function runFactCheckUrlManual(url, claim) {
     const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
@@ -736,78 +731,92 @@ async function urlToBase64(url) {
 // Handles multimodal fact check triggered by right-clicking an image.
 // ====================================================================
 async function runFactCheckMultimodalUrl(imageUrl, text) {
-    // --- CHECK CACHE ---
-    const cachedResult = getFromCache(text);
-    if (cachedResult) {
-        console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
-        return cachedResult;
-    }
-    // --- END CHECK CACHE ---
+    const cachedResult = getFromCache(text);
+    if (cachedResult) {
+        console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
+        return cachedResult;
+    }
 
-    try {
-        const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-        const geminiApiKey = resultStorage.geminiApiKey;
+    try {
+        const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+        let geminiApiKey = resultStorage.geminiApiKey;
+        
+        const DEMO_API_KEY = "AIzaSyA4aSZOWaoxSnTbmjCm_rLxX-YBF-ZxlOU"; 
 
-        // 1. Convert URL to Base64 (Required for Local/Cloud)
-        const { base64: base64Image, mimeType } = await urlToBase64(imageUrl);
+        if (!geminiApiKey) { 
+            console.warn("[Veritas Multimodal Fallback] Key missing in storage. Using Hardcoded DEMO Key.");
+            geminiApiKey = DEMO_API_KEY; 
+        }
 
-        // --- LOCAL MULTIMODAL FALLBACK (PRIORITY) ---
-        if (!geminiApiKey && isLocalAiAvailable()) {
-            console.log("[Veritas Hybrid] Multimodal Cloud API Key missing. Falling back to Local AI.");
+        if (geminiApiKey === DEMO_API_KEY && geminiApiKey.includes("PASTE_NOW")) {
+            return {
+                flag: "Error",
+                message: "Demo Key Placeholder Error: Please replace the hardcoded DEMO_API_KEY in background.js with your actual working key for the demo to run instantly.",
+                claim: "Multimodal Check Failed",
+                debug: "Missing API Key Placeholder"
+            };
+        }
 
-            // Use imported prompt for Local Multimodal
-            const localPrompt = LOCAL_PROMPT_MULTIMODAL_FALLBACK(text);
+        // Convert URL to Base64 (Required for Local/Cloud)
+        const { base64: base64Image, mimeType } = await urlToBase64(imageUrl);
 
-            // Call Local AI (Assuming Local AI supports Multimodal/InlineData)
-            const localResult = await chrome.ai.generateContent({
-                model: 'gemini-flash',
-                prompt: localPrompt,
-                config: { maxOutputTokens: 256 },
-                contents: [
-                    { text: localPrompt },
-                    { inlineData: { mimeType: mimeType, data: base64Image } }
-                ]
-            });
+        // --- LOCAL MULTIMODAL FALLBACK (PRIORITY) ---
+        if (!geminiApiKey && isLocalAiAvailable()) { 
+            console.log("[Veritas Hybrid] Multimodal Cloud API Key missing. Falling back to Local AI.");
 
-            // Parsing Local Fallback Result
-            const aiResponse = localResult.text.trim();
-            const upperResponse = aiResponse.toUpperCase();
-            let flag = "Kuning";
-            if (upperResponse.startsWith("FACT")) { flag = "Hijau"; }
-            else if (upperResponse.startsWith("MISINFORMATION")) { flag = "Merah"; }
-            else if (upperResponse.startsWith("CAUTION")) { flag = "Kuning"; }
+            // Use imported prompt for Local Multimodal
+            const localPrompt = LOCAL_PROMPT_MULTIMODAL_FALLBACK(text);
 
-            // Add flag for visual identification in History/Popup
-            const message = `${flag.toUpperCase()}=**"${text}"**\nReason:\n${aiResponse}\nLink:\n- [LOCAL AI FALLBACK: Cloud API Key Missing]`;
+            // Call Local AI (Assuming Local AI supports Multimodal/InlineData)
+            const localResult = await chrome.ai.generateContent({
+                model: 'gemini-flash',
+                prompt: localPrompt,
+                config: { maxOutputTokens: 256 },
+                contents: [
+                    { text: localPrompt },
+                    { inlineData: { mimeType: mimeType, data: base64Image } }
+                ]
+            });
 
-            const finalResult = { flag: flag, message: message, claim: text };
+            // Parsing Local Fallback Result
+            const aiResponse = localResult.text.trim();
+            const upperResponse = aiResponse.toUpperCase();
+            let flag = "Kuning";
+            if (upperResponse.startsWith("FACT")) { flag = "Hijau"; }
+            else if (upperResponse.startsWith("MISINFORMATION")) { flag = "Merah"; }
+            else if (upperResponse.startsWith("CAUTION")) { flag = "Kuning"; }
 
-            // Set to Cache after successful local fallback
-            setToCache(text, finalResult);
-            saveFactCheckToHistory(finalResult);
-            return finalResult;
-        }
+            // Add flag for visual identification in History/Popup
+            const message = `${flag.toUpperCase()}=**"${text}"**\nReason:\n${aiResponse}\nLink:\n- [LOCAL AI FALLBACK: Cloud API Key Missing]`;
 
-        // --- CLOUD CALL ERROR (if API key is missing AND Local AI is unavailable) ---
-        if (!geminiApiKey) {
-            return {
-                flag: "Error",
-                message: "Gemini API Key is not set. Multimodal requires Cloud access, and Local AI is unavailable.",
-                claim: "Multimodal Check Failed"
-            };
-        }
+            const finalResult = { flag: flag, message: message, claim: text };
 
-        // Proceed to Multimodal Direct (using Cloud API)
-        return runFactCheckMultimodalDirect(base64Image, mimeType, text);
+            // Set to Cache after successful local fallback
+            setToCache(text, finalResult);
+            saveFactCheckToHistory(finalResult);
+            return finalResult;
+        }
 
-    } catch (error) {
-        console.error("[Veritas Multimodal] Fatal Fetch/Base64 Error:", error);
-        return {
-            flag: "Error",
-            message: `Network/Fatal Error (Failed to Fetch Image): ${error.message}`,
-            debug: error.message
-        };
-    }
+        // --- CLOUD CALL ERROR (if API key is missing AND Local AI is unavailable) ---
+        if (!geminiApiKey) {
+            return {
+                flag: "Error",
+                message: "Gemini API Key is not set. Multimodal requires Cloud access, and Local AI is unavailable.",
+                claim: "Multimodal Check Failed"
+            };
+        }
+
+        // Proceed to Multimodal Direct (using Cloud API)
+        return runFactCheckMultimodalDirect(base64Image, mimeType, text);
+
+    } catch (error) {
+        console.error("[Veritas Multimodal] Fatal Fetch/Base64 Error:", error);
+        return {
+            flag: "Error",
+            message: `Network/Fatal Error (Failed to Fetch Image): ${error.message}`,
+            debug: error.message
+        };
+    }
 }
 
 // ====================================================================
@@ -815,93 +824,105 @@ async function runFactCheckMultimodalUrl(imageUrl, text) {
 // Core function for multimodal fact checking using the Cloud API.
 // ====================================================================
 async function runFactCheckMultimodalDirect(base64Image, mimeType, text) {
-    // --- CHECK CACHE ---
-    const cachedResult = getFromCache(text);
-    if (cachedResult) {
-        console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
-        return cachedResult;
-    }
-    // --- END CHECK CACHE ---
+    // --- CHECK CACHE ---
+    const cachedResult = getFromCache(text);
+    if (cachedResult) {
+        console.log("[Veritas Cache] Result found in memory cache. Returning instantly.");
+        return cachedResult;
+    }
 
-    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    const geminiApiKey = resultStorage.geminiApiKey;
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    let geminiApiKey = resultStorage.geminiApiKey; 
 
-    if (!geminiApiKey) {
-        // Simple error message for direct upload/call without key
-        return { flag: "Error", message: "Gemini API Key is not set. Cloud access blocked.", claim: "Multimodal Check Failed" };
-    }
+    const DEMO_API_KEY = "AIzaSyA4aSZOWaoxSnTbmjCm_rLxX-YBF-ZxlOU"; 
+    
+    if (!geminiApiKey) { 
+        console.warn("[Veritas Multimodal Fallback] Key missing in storage. Using Hardcoded DEMO Key.");
+        geminiApiKey = DEMO_API_KEY; 
+    }
 
-    // Use imported cloud multimodal prompt
-    const promptText = CLOUD_PROMPT_MULTIMODAL(text);
+    if (geminiApiKey === DEMO_API_KEY && geminiApiKey.includes("PASTE_NOW")) {
+        return {
+            flag: "Error",
+            message: "Demo Key Placeholder Error: Please replace the hardcoded DEMO_API_KEY in background.js with your actual working key for the demo to run instantly.",
+            claim: "Multimodal Check Failed",
+            debug: "Missing API Key Placeholder"
+        };
+    }
 
-    console.log(
-        "[Veritas Upload] Sending Base64 Image and Prompt to Gemini Cloud (with Google Search)..."
-    );
+    // Use imported cloud multimodal prompt
+    const promptText = CLOUD_PROMPT_MULTIMODAL(text);
 
-    const contents = [
-        {
-            role: "user",
-            parts: [
-                { text: promptText },
-                {
-                    inlineData: {
-                        mimeType: mimeType,
-                        data: base64Image
-                    }
-                }
-            ]
-        }
-    ];
+    console.log(
+        "[Veritas Upload] Sending Base64 Image and Prompt to Gemini Cloud (with Google Search)..."
+    );
 
-    const result = await executeGeminiCall(text, contents);
+    const contents = [
+        {
+            role: "user",
+            parts: [
+                { text: promptText },
+                {
+                    inlineData: {
+                        mimeType: mimeType,
+                        data: base64Image
+                    }
+                }
+            ]
+        }
+    ];
 
-    // Set to Cache after successful cloud call
-    if (result.flag !== 'Error') {
-        setToCache(text, result);
-    }
+    const result = await executeGeminiCall(text, contents);
 
-    return result;
+    // Set to Cache after successful cloud call
+    if (result.flag !== 'Error') {
+        setToCache(text, result);
+    }
+    return result;
 }
 
 // ====================================================================
-// FUNCTION 9: TEST API KEY LOGIC (CALLED FROM settings.js)
+// TEST API KEY LOGIC (CALLED FROM settings.js)
 // Tests if the user's provided API key is valid.
 // ====================================================================
 async function testGeminiKeyLogic(apiKey) {
-    // Use imported test prompt
     const testPrompt = CLOUD_PROMPT_TEST_KEY;
     const testContents = [{ role: "user", parts: [{ text: testPrompt }] }];
 
     const payload = {
         contents: testContents,
-        config: { maxOutputTokens: 10 } // Very short response token limit
+        generationConfig: { maxOutputTokens: 10 } 
     };
 
     try {
         const response = await fetch(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-goog-api-key": apiKey
-                },
-                body: JSON.stringify(payload)
-            });
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": apiKey
+            },
+            body: JSON.stringify(payload)
+        });
 
         const data = await response.json();
 
-        if (response.ok && data.candidates && data.candidates.length > 0) {
-            const aiResponse = data.candidates[0].content.parts.map(p => p.text).join('\n').trim().toUpperCase();
-            if (aiResponse.startsWith("FACT")) {
-                return { success: true, message: "Key successfully validated." };
+        if (response.ok && !data.error) {
+            return { success: true, message: "Key successfully validated and operational!" }; 
+        }
+        
+        if (data.error) {
+            let errorMessage = data.error.message;
+            if (errorMessage.includes("API_KEY_INVALID")) {
+                errorMessage = "API Key is invalid or restricted. Check your key format.";
             }
+            if (errorMessage.includes("QUOTA_EXCEEDED")) {
+                errorMessage = "API Key is valid but quota exceeded. Try again later.";
+            }
+            return { success: false, message: errorMessage };
         }
-
-        let errorMessage = data.error ? data.error.message : 'API returned unexpected data.';
-        if (errorMessage.includes("API_KEY_INVALID")) {
-            errorMessage = "API Key is invalid or restricted.";
-        }
-        return { success: false, message: errorMessage };
+        
+        return { success: false, message: `API returned an unexpected HTTP status (${response.status}).` };
 
     } catch (error) {
         return { success: false, message: `Network/Fetch Error: ${error.message}` };
@@ -909,38 +930,48 @@ async function testGeminiKeyLogic(apiKey) {
 }
 
 // ====================================================================
-// MORTA FIX: NEW FUNCTION X: RUN URL FACT CHECK CONTEXT (NEW CORE LOGIC)
+// X: RUN URL FACT CHECK CONTEXT 
 // Core logic for processing URL content and sending it to Gemini.
 // ====================================================================
 async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
-    // Note: This function is now ONLY for handling content scraped from the ACTIVE tab, 
-    // potentially triggered by a future Context Menu feature or other automated process.
-    
-    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    const geminiApiKey = resultStorage.geminiApiKey;
-    
-    if (!geminiApiKey) {
-        return {
-            flag: "Error",
-            message: "Gemini API Key is not set. Contextual URL Fact Check requires Cloud access.",
-            claim: claim
-        };
-    }
 
-    // Use imported prompt for URL Context (Requires CLOUD_PROMPT_URL_CONTEXT to be imported in prompt.js)
-    const prompt = CLOUD_PROMPT_URL_CONTEXT(claim, pageContent, pageUrl);
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    let geminiApiKey = resultStorage.geminiApiKey;
+
+    const DEMO_API_KEY = "AIzaSyA4aSZOWaoxSnTbmjCm_rxX-YBF-ZxlOU"; 
+    
+    if (!geminiApiKey) { 
+        console.warn("[Veritas URL Context Fallback] Key missing in storage. Using Hardcoded DEMO Key.");
+        geminiApiKey = DEMO_API_KEY; 
+    }
+
+    // Safety Check: Blokir jika placeholder belum diganti (Error instruksi yang jelas)
+    if (geminiApiKey === DEMO_API_KEY && geminiApiKey.includes("PASTE_NOW")) {
+        return {
+            flag: "Error",
+            message: "Demo Key Placeholder Error: Please replace the hardcoded DEMO_API_KEY in background.js with your actual working key for the demo to run instantly.",
+            claim: claim
+        };
+    }
+
+    if (!geminiApiKey) {
+        return {
+            flag: "Error",
+            message: "Gemini API Key is not set. Contextual URL Fact Check requires Cloud access.",
+            claim: claim
+        };
+    }
+
+    // Use imported prompt for URL Context (Requires CLOUD_PROMPT_URL_CONTEXT to be imported in prompt.js)
+    const prompt = CLOUD_PROMPT_URL_CONTEXT(claim, pageContent, pageUrl);
 
     console.log(
         "[Veritas URL Context] Sending URL page content and claim to Gemini Cloud (WITHOUT Google Search to ensure contextual accuracy)..."
     );
     
-    // Modified the core Gemini call to explicitly NOT use Google Search here, 
-    // to force it to use the provided page context only.
-    
     const contents = [{ role: "user", parts: [{ text: prompt }] }];
     const payload = {
         contents: contents,
-        // tools: [{ googleSearch: {} }] // COMMENTED OUT: We explicitly DON'T want grounding here.
     };
 
     try {

@@ -2,92 +2,113 @@
 
 document.addEventListener('DOMContentLoaded', initializeSettings);
 
+// === CONSTANTS ===
+const STATUS_COLORS = {
+    SUCCESS_BG: '#d4edda',
+    SUCCESS_TEXT: '#155724',
+    ERROR_BG: '#f8d7da',
+    ERROR_TEXT: '#721c24',
+    WARNING_BG: '#fff3cd',
+    WARNING_TEXT: '#856404',
+    DEFAULT_BG: '#f5f5f5',
+    DEFAULT_TEXT: 'black'
+};
+
+// === INITIALIZATION ===
 function initializeSettings() {
     restoreKey();
     document.getElementById('saveButton').addEventListener('click', saveKey);
     document.getElementById('testButton').addEventListener('click', testKey);
 }
 
+// === SAVE KEY ===
 function saveKey() {
     const apiKey = document.getElementById('apiKeyInput').value.trim();
     const status = document.getElementById('status');
-    
-    status.style.backgroundColor = '#fff3cd';
-    status.style.color = '#856404';
+
+    status.style.backgroundColor = STATUS_COLORS.WARNING_BG;
+    status.style.color = STATUS_COLORS.WARNING_TEXT;
 
     if (apiKey.length < 30) {
-        status.textContent = '❌ Key is too short. Please ensure it was copied correctly!';
+        updateStatus('❌ Key is too short. Please ensure it was copied correctly!', 'error');
         return;
     }
 
-    // Menggunakan chrome.storage.local.set untuk menyimpan data secara aman
-    chrome.storage.local.set({ 'geminiApiKey': apiKey }, () => {
-        status.textContent = '✅ API Key saved successfully!';
-        status.style.backgroundColor = '#d4edda';
-        status.style.color = '#155724';
-        
-        // Jeda sebentar sebelum me-load ulang status/display key
-        setTimeout(() => {
-            restoreKey();
-        }, 750);
+    chrome.storage.local.set({ geminiApiKey: apiKey }, () => {
+        updateStatus('✅ API Key saved successfully!', 'success');
+
+        // Slight delay before refreshing the display
+        setTimeout(() => restoreKey(), 750);
     });
 }
 
+// === RESTORE KEY ===
 function restoreKey() {
     const apiKeyInput = document.getElementById('apiKeyInput');
     const status = document.getElementById('status');
-    status.style.backgroundColor = '#f5f5f5';
 
-    // Menggunakan chrome.storage.local.get untuk mengambil data
+    // Clear input field for new entry
+    apiKeyInput.value = '';
+    status.style.backgroundColor = STATUS_COLORS.DEFAULT_BG;
+
     chrome.storage.local.get(['geminiApiKey'], (result) => {
         if (result.geminiApiKey) {
-            // Menampilkan sebagian key sebagai indikasi bahwa key sudah tersimpan
-            apiKeyInput.value = '**********' + result.geminiApiKey.slice(-5);
-            status.textContent = `Key loaded: ${result.geminiApiKey.slice(0, 5)}...${result.geminiApiKey.slice(-5)}`;
+            const maskedKey = `${result.geminiApiKey.slice(0, 5)}...${result.geminiApiKey.slice(-5)}`;
+            status.textContent = `Key Status: Saved & Loaded (${maskedKey})`;
             status.style.color = 'blue';
         } else {
-            apiKeyInput.value = '';
-            status.textContent = 'No API Key saved yet.';
-            status.style.color = 'black';
+            updateStatus('No API Key saved yet.', 'default');
         }
     });
 }
 
+// === TEST KEY ===
 function testKey() {
     const status = document.getElementById('status');
-    // NOTE: Ambil nilai asli dari input untuk diuji.
-    // Jika input dimasking (di restoreKey), kita harus minta user paste ulang full key saat testing.
     const apiKey = document.getElementById('apiKeyInput').value.trim();
-    
-    // Check apakah user menekan test tanpa memasukkan full key (hanya masked key)
-    if (apiKey.length < 30 || apiKey.startsWith('**********')) {
-        status.textContent = '⚠️ Please paste the full API Key into the field to run the test.';
-        status.style.backgroundColor = '#f8d7da';
-        status.style.color = '#721c24';
+
+    if (apiKey.length < 30) {
+        updateStatus('⚠️ Please paste the FULL API Key into the field to run the test.', 'error');
         return;
     }
 
-    status.textContent = '⏳ Testing key stability...';
-    status.style.backgroundColor = '#fff3cd';
-    status.style.color = '#856404';
-    
-    // Kirim pesan ke background.js untuk menjalankan fungsi test API (melalui testGeminiKeyLogic)
-    chrome.runtime.sendMessage({ action: 'testGeminiKey', apiKey: apiKey }, (response) => {
+    updateStatus('⏳ Testing key stability...', 'warning');
+
+    chrome.runtime.sendMessage({ action: 'testGeminiKey', apiKey }, (response) => {
         if (chrome.runtime.lastError) {
-            status.textContent = `❌ Test Failed: Service Worker Error. Try reloading the extension.`;
-            status.style.backgroundColor = '#f8d7da';
-            status.style.color = '#721c24';
+            updateStatus('❌ Test Failed: Service Worker Error. Try reloading the extension.', 'error');
             return;
         }
 
         if (response && response.success) {
-            status.textContent = `✅ API Key is VALID and working!`;
-            status.style.backgroundColor = '#d4edda';
-            status.style.color = '#155724';
+            updateStatus('✅ API Key is VALID and working!', 'success');
         } else {
-            status.textContent = `❌ Test Failed: ${response.message || 'Check network or API Key permission.'}`;
-            status.style.backgroundColor = '#f8d7da';
-            status.style.color = '#721c24';
+            updateStatus(`❌ Test Failed: ${response?.message || 'Check network or API Key permission.'}`, 'error');
         }
     });
+}
+
+// === HELPER FUNCTION ===
+function updateStatus(message, type = 'default') {
+    const status = document.getElementById('status');
+    status.textContent = message;
+
+    switch (type) {
+        case 'success':
+            status.style.backgroundColor = STATUS_COLORS.SUCCESS_BG;
+            status.style.color = STATUS_COLORS.SUCCESS_TEXT;
+            break;
+        case 'error':
+            status.style.backgroundColor = STATUS_COLORS.ERROR_BG;
+            status.style.color = STATUS_COLORS.ERROR_TEXT;
+            break;
+        case 'warning':
+            status.style.backgroundColor = STATUS_COLORS.WARNING_BG;
+            status.style.color = STATUS_COLORS.WARNING_TEXT;
+            break;
+        default:
+            status.style.backgroundColor = STATUS_COLORS.DEFAULT_BG;
+            status.style.color = STATUS_COLORS.DEFAULT_TEXT;
+            break;
+    }
 }
