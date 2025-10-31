@@ -269,9 +269,7 @@ chrome.runtime.onMessage.addListener(
             };
             chrome.storage.local.set({ 'lastFactCheckResult': loadingResult });
 
-            // Run the existing Hybrid Fact Check Logic (Function 5)
             runFactCheckHybrid(claim).then(result => {
-                // Update result and notify popup
                 sendFactCheckNotification(claim, result.flag !== 'Error');
                 chrome.storage.local.set({ 'lastFactCheckResult': result });
 
@@ -279,6 +277,8 @@ chrome.runtime.onMessage.addListener(
                     action: 'updateFinalResult',
                     resultData: result
                 });
+                if (chrome.runtime.lastError) { console.warn("Popup closed. Update ignored."); } 
+                
                 sendResponse({ success: true, result: result });
 
             }).catch(error => {
@@ -287,10 +287,13 @@ chrome.runtime.onMessage.addListener(
                 chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
 
                 chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
+
+                if (chrome.runtime.lastError) { console.warn("Popup closed. Error update ignored."); }
+                
                 sendResponse({ success: false, error: errorResult });
             });
 
-            return true; // Indicates an asynchronous response
+            return true;
         }
 
         // --- POPUP: MULTIMODAL UPLOAD (Existing) ---
@@ -309,6 +312,8 @@ chrome.runtime.onMessage.addListener(
                     action: 'updateFinalResult',
                     resultData: result
                 });
+                if (chrome.runtime.lastError) { console.warn("Popup closed. Update ignored."); }
+                
                 sendResponse({ success: true, result: result });
 
             }).catch(error => {
@@ -317,10 +322,12 @@ chrome.runtime.onMessage.addListener(
                 chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
 
                 chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
+                if (chrome.runtime.lastError) { console.warn("Popup closed. Error update ignored."); }
+                
                 sendResponse({ success: false, error: errorResult });
             });
 
-            return true; // Indicates an asynchronous response
+            return true; 
         }
         
         // --- POPUP: URL FACT CHECK WITH MANUAL URL & CLAIM ---
@@ -337,8 +344,7 @@ chrome.runtime.onMessage.addListener(
             };
             chrome.storage.local.set({ 'lastFactCheckResult': loadingResult });
 
-            // Run the new Manual URL Fact Check Logic
-            runFactCheckUrlManual(url, claim).then(result => {
+            runFactCheckUrlContext(url, claim).then(result => { 
                 // Update result and notify popup
                 sendFactCheckNotification(claim, result.flag !== 'Error');
                 chrome.storage.local.set({ 'lastFactCheckResult': result });
@@ -347,6 +353,8 @@ chrome.runtime.onMessage.addListener(
                     action: 'updateFinalResult',
                     resultData: result
                 });
+                if (chrome.runtime.lastError) { console.warn("Popup closed. Update ignored."); }
+                
                 sendResponse({ success: true, result: result });
 
             }).catch(error => {
@@ -355,13 +363,15 @@ chrome.runtime.onMessage.addListener(
                 chrome.storage.local.set({ 'lastFactCheckResult': errorResult });
 
                 chrome.runtime.sendMessage({ action: "updateFinalResult", resultData: errorResult });
+                if (chrome.runtime.lastError) { console.warn("Popup closed. Error update ignored."); }
+
                 sendResponse({ success: false, error: errorResult });
             });
 
-            return true; // Indicates an asynchronous response
+            return true; 
         }
         
-        // --- SETTINGS: TEST API KEY (Existing) ---
+        // --- SETTINGS: TEST API KEY ---
         if (request.action === 'testGeminiKey') {
             const apiKeyToTest = request.apiKey;
 
@@ -369,7 +379,7 @@ chrome.runtime.onMessage.addListener(
             testGeminiKeyLogic(apiKeyToTest).then(response => {
                 sendResponse(response);
             });
-            return true; // Indicates an asynchronous response
+            return true; 
         }
     }
 );
@@ -384,7 +394,6 @@ async function executeGeminiCall(claim, contents) {
 
     if (!geminiApiKey) {
         console.warn("[Veritas API Fallback] No API Key found. Using Demo Key for testing purposes.");
-        // Hardcoded API Key for DEMO purposes
         geminiApiKey = "AIzaSyA4aSZOWaoxSnTbmjCm_rLxX-YBF-ZxlOU";
     }
     
@@ -607,95 +616,6 @@ async function runFactCheckHybrid(text) {
     }
 
     return result;
-}
-
-// ====================================================================
-// RUN FACT CHECK MANUAL URL (NOW WITH GROUNDING)
-// ====================================================================
-async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
-    // --- CHECK API KEY & FALLBACK LOGIC ---
-    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    let geminiApiKey = resultStorage.geminiApiKey; // WAJIB 'let'
-
-    const DEMO_API_KEY = "AIzaSyA4aSZOWaoxSnTbmjCm_rLxX-YBF-ZxlOU"; 
-    
-    if (!geminiApiKey) { 
-        console.warn("[Veritas URL Context Fallback] Key missing in storage. Using Hardcoded DEMO Key.");
-        geminiApiKey = DEMO_API_KEY; // Inject kunci demo
-    }
-
-    if (geminiApiKey === DEMO_API_KEY && geminiApiKey.includes("PASTE_NOW")) {
-        return {
-            flag: "Error",
-            message: "Demo Key Placeholder Error: Please replace the hardcoded DEMO_API_KEY in background.js with your actual working key for the demo to run instantly.",
-            claim: claim
-        };
-    }
-    
-    let pageContent = "";
-    let finalUrl = url;
-
-    // --- Content Fetching Logic ---
-    try {
-        console.log(`[Veritas URL Manual] Fetching content from: ${url}`);
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`Failed to fetch URL content (Status: ${response.status} ${response.statusText})`);
-        }
-        
-        // Get the final URL in case of redirects
-        finalUrl = response.url; 
-        
-        // Read HTML content as text
-        const htmlText = await response.text();
-
-        // Limit content size for model payload
-        const MAX_CONTENT_LENGTH = 15000; 
-        pageContent = htmlText.substring(0, MAX_CONTENT_LENGTH);
-
-    } catch (error) {
-        console.error(`[Veritas URL Manual] Fetch/Parsing Error for ${url}:`, error);
-        return {
-            flag: "Error",
-            message: `Failed to retrieve content from URL: ${error.message}. Check URL validity or manifest permissions.`,
-            claim: claim
-        };
-    }
-
-    // 2. Prepare Prompt and Content for Gemini
-    // Prompt meminta komparasi dengan Grounding Search.
-    const prompt = CLOUD_PROMPT_URL_CONTEXT(claim, pageContent, finalUrl);
-
-    console.log(
-        "[Veritas URL Context] Sending fetched URL content and claim to Gemini Cloud (WITH Google Search Grounding)..."
-    );
-    
-    const contents = [{ role: "user", parts: [{ text: prompt }] }];
-    
-    // MORTA FIX: Memanggil executeGeminiCall yang mengaktifkan Google Search Tool secara default.
-    const result = await executeGeminiCall(claim, contents);
-
-    // Sekarang, kita harus memastikan URL manual yang diinput juga muncul sebagai link, 
-    // terlepas dari hasil Grounding Search. executeGeminiCall sudah mengurus Grounding links,
-    // jadi kita tambahkan URL manual sebagai link tambahan di bagian Link.
-    
-    if (result.flag !== 'Error') {
-         // Tambahkan URL manual sebagai link terakhir di bagian Link (Markdown Link valid)
-         const manualLink = `- [Contextual Source: ${finalUrl}](${finalUrl})`;
-         
-         let newMessage = result.message.replace('Link:', `Link:\n${manualLink}`);
-         
-         // Jika Link: tidak ada (karena AI tidak memberikan Grounding), kita tambahkan Link: + Manual Link
-         if (!newMessage.includes('Link:')) {
-             newMessage += `\nLink:\n${manualLink}`;
-         }
-
-         result.message = newMessage;
-         saveFactCheckToHistory(result); // Simpan hasil yang sudah diperbarui
-    }
-    
-    return result;
 }
 
 // ====================================================================
@@ -941,59 +861,79 @@ async function testGeminiKeyLogic(apiKey) {
 // X: RUN URL FACT CHECK CONTEXT 
 // Core logic for processing URL content and sending it to Gemini.
 // ====================================================================
-async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
+async function runFactCheckUrlContext(claim, pageUrl) {
+    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
+    let geminiApiKey = resultStorage.geminiApiKey; 
 
-    const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    let geminiApiKey = resultStorage.geminiApiKey;
-
-    const DEMO_API_KEY = "AIzaSyA4aSZOWaoxSnTbmjCm_rxX-YBF-ZxlOU"; 
+    const DEMO_API_KEY = "AIzaSyA4aSZOWaoxSnTbmjCm_rLxX-YBF-ZxlOU"; 
     
-    if (!geminiApiKey) { 
-        console.warn("[Veritas URL Context Fallback] Key missing in storage. Using Hardcoded DEMO Key.");
-        geminiApiKey = DEMO_API_KEY; 
-    }
+    if (!geminiApiKey) { 
+        console.warn("[Veritas URL Context Fallback] Key missing in storage. Using Hardcoded DEMO Key.");
+        geminiApiKey = DEMO_API_KEY; // Inject kunci demo
+    }
 
-    // Safety Check: Blokir jika placeholder belum diganti (Error instruksi yang jelas)
-    if (geminiApiKey === DEMO_API_KEY && geminiApiKey.includes("PASTE_NOW")) {
-        return {
-            flag: "Error",
-            message: "Demo Key Placeholder Error: Please replace the hardcoded DEMO_API_KEY in background.js with your actual working key for the demo to run instantly.",
-            claim: claim
-        };
-    }
+    if (geminiApiKey === DEMO_API_KEY && geminiApiKey.includes("PASTE_NOW")) {
+        return {
+            flag: "Error",
+            message: "Demo Key Placeholder Error: Please replace the hardcoded DEMO_API_KEY in background.js with your actual working key for the demo to run instantly.",
+            claim: claim
+        };
+    }
 
-    if (!geminiApiKey) {
-        return {
-            flag: "Error",
-            message: "Gemini API Key is not set. Contextual URL Fact Check requires Cloud access.",
-            claim: claim
-        };
-    }
+    if (!geminiApiKey) {
+        return {
+            flag: "Error",
+            message: "Gemini API Key is not set. Contextual URL Fact Check requires Cloud access.",
+            claim: claim
+        };
+    }
+    
+    let pageContent = "";
+    let finalUrl = pageUrl; 
 
-    // Use imported prompt for URL Context (Requires CLOUD_PROMPT_URL_CONTEXT to be imported in prompt.js)
-    const prompt = CLOUD_PROMPT_URL_CONTEXT(claim, pageContent, pageUrl);
+    try {
+        console.log(`[Veritas URL Manual] Fetching content from: ${pageUrl}`); 
+        const response = await fetch(pageUrl); 
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch URL content (Status: ${response.status} ${response.statusText})`);
+        }
+        
+        finalUrl = response.url; 
+        
+        const htmlText = await response.text();
+        const MAX_CONTENT_LENGTH = 15000; 
+        pageContent = htmlText.substring(0, MAX_CONTENT_LENGTH);
+
+    } catch (error) {
+        console.error(`[Veritas URL Manual] Fetch/Parsing Error for ${pageUrl}:`, error);
+        return {
+            flag: "Error",
+            message: `Failed to retrieve content from URL: ${error.message}. Check URL validity or manifest permissions.`,
+            claim: claim
+        };
+    }
+
+    const prompt = CLOUD_PROMPT_URL_CONTEXT(claim, pageContent, finalUrl);
 
     console.log(
-        "[Veritas URL Context] Sending URL page content and claim to Gemini Cloud (WITHOUT Google Search to ensure contextual accuracy)..."
+        "[Veritas URL Context] Sending fetched URL content and claim to Gemini Cloud (WITHOUT Google Search to ensure contextual accuracy)..."
     );
     
     const contents = [{ role: "user", parts: [{ text: prompt }] }];
-    const payload = {
-        contents: contents,
-    };
+    const payload = { contents: contents, }; 
 
     try {
         const response = await fetch(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-goog-api-key": geminiApiKey
-                },
-                body: JSON.stringify(payload)
-            });
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": geminiApiKey
+            },
+            body: JSON.stringify(payload)
+        });
         
-        // This simplified result parsing reuses logic from executeGeminiCall for consistency.
         const data = await response.json();
 
         if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
