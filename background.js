@@ -612,14 +612,22 @@ async function runFactCheckHybrid(text) {
 // ====================================================================
 // RUN FACT CHECK MANUAL URL (NOW WITH GROUNDING)
 // ====================================================================
-async function runFactCheckUrlManual(url, claim) {
+async function runFactCheckUrlContext(claim, pageContent, pageUrl) {
+    // --- CHECK API KEY & FALLBACK LOGIC ---
     const resultStorage = await chrome.storage.local.get(['geminiApiKey']);
-    const geminiApiKey = resultStorage.geminiApiKey;
+    let geminiApiKey = resultStorage.geminiApiKey; // WAJIB 'let'
+
+    const DEMO_API_KEY = "AIzaSyA4aSZOWaoxSnTbmjCm_rLxX-YBF-ZxlOU"; 
     
-    if (!geminiApiKey) {
+    if (!geminiApiKey) { 
+        console.warn("[Veritas URL Context Fallback] Key missing in storage. Using Hardcoded DEMO Key.");
+        geminiApiKey = DEMO_API_KEY; // Inject kunci demo
+    }
+
+    if (geminiApiKey === DEMO_API_KEY && geminiApiKey.includes("PASTE_NOW")) {
         return {
             flag: "Error",
-            message: "Gemini API Key is not set. Manual URL Fact Check requires Cloud access.",
+            message: "Demo Key Placeholder Error: Please replace the hardcoded DEMO_API_KEY in background.js with your actual working key for the demo to run instantly.",
             claim: claim
         };
     }
